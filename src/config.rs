@@ -19,11 +19,15 @@ pub struct TsbConfig {
 }
 
 impl TsbConfig {
+    /// Returns the base directory for TSB config (~/.config/tsb)
+    pub fn config_dir() -> Result<PathBuf> {
+        let home = dirs::home_dir().context("could not determine home directory")?;
+        Ok(home.join(".config").join("tsb"))
+    }
+
     /// Returns the path to the config file (~/.config/tsb/config.yaml).
     fn config_path() -> Result<PathBuf> {
-        let home = dirs::home_dir().context("could not determine home directory")?;
-        let config_dir = home.join(".config").join("tsb");
-        Ok(config_dir.join("config.yaml"))
+        Ok(Self::config_dir()?.join("config.yaml"))
     }
 
     /// Loads config from disk. Returns default config if the file doesn't exist.

@@ -330,6 +330,11 @@ pub struct App {
     pub http_client: reqwest::Client,
 }
 
+const EMBEDDED_METADATA: &str = include_str!("../resources/initializr-metadata.json");
+const EMBEDDED_DEPENDENCIES: &str = include_str!("../resources/dependencies.json");
+
+const GITHUB_METADATA_URL: &str = "https://raw.githubusercontent.com/huseyinbabal/tsb/main/resources/initializr-metadata.json";
+const GITHUB_DEPENDENCIES_URL: &str = "https://raw.githubusercontent.com/huseyinbabal/tsb/main/resources/dependencies.json";
 impl App {
     // -----------------------------------------------------------------------
     // Constructor
@@ -1214,66 +1219,75 @@ impl App {
     }
 
     // -----------------------------------------------------------------------
-    // Spring Initializr — metadata fetch with 24h file cache
+    // -----------------------------------------------------------------------
+    // Local Metadata management
     // -----------------------------------------------------------------------
 
-    /// Path to the local metadata cache file.
-    fn initializr_cache_path() -> PathBuf {
-        dirs::home_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join(".config")
-            .join("tsb")
-            .join("initializr_cache.json")
+    fn initializr_metadata_path() -> PathBuf {
+        crate::config::TsbConfig::config_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("initializr-metadata.json")
     }
 
-    /// Fetch Initializr metadata from `start.spring.io`, using a local file
-    /// cache that is valid for 24 hours.
-    pub async fn fetch_initializr_metadata(
-        client: &reqwest::Client,
-    ) -> Result<InitializrMetadata> {
-        let cache_path = Self::initializr_cache_path();
+    fn initializr_dependencies_path() -> PathBuf {
+        crate::config::TsbConfig::config_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("dependencies.json")
+    }
 
-        // Try to load from cache
-        if cache_path.exists() {
-            if let Ok(meta) = std::fs::metadata(&cache_path) {
-                if let Ok(modified) = meta.modified() {
-                    let age = modified.elapsed().unwrap_or(Duration::from_secs(u64::MAX));
-                    if age < Duration::from_secs(24 * 60 * 60) {
-                        if let Ok(data) = std::fs::read_to_string(&cache_path) {
-                            if let Ok(cached) =
-                                serde_json::from_str::<InitializrMetadata>(&data)
-                            {
-                                return Ok(cached);
-                            }
-                        }
+    pub fn ensure_local_metadata() -> Result<()> {
+        let meta_path = Self::initializr_metadata_path();
+        let deps_path = Self::initializr_dependencies_path();
+
+        if let Some(parent) = meta_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+
+        if !meta_path.exists() {
+            std::fs::write(&meta_path, EMBEDDED_METADATA)?;
+        }
+        if !deps_path.exists() {
+            std::fs::write(&deps_path, EMBEDDED_DEPENDENCIES)?;
+        }
+        Ok(())
+    }
+
+    pub fn sync_metadata_from_github(client: reqwest::Client) {
+        tokio::spawn(async move {
+            let meta_path = Self::initializr_metadata_path();
+            let deps_path = Self::initializr_dependencies_path();
+
+            if let Ok(resp) = client.get(GITHUB_METADATA_URL).send().await {
+                if resp.status().is_success() {
+                    if let Ok(text) = resp.text().await {
+                        let _ = std::fs::write(&meta_path, text);
                     }
                 }
             }
-        }
 
-        // Fetch from remote
-        let resp = client
-            .get("https://start.spring.io/metadata/client")
-            .header("Accept", "application/json")
-            .send()
-            .await
-            .context("failed to fetch Initializr metadata")?;
+            if let Ok(resp) = client.get(GITHUB_DEPENDENCIES_URL).send().await {
+                if resp.status().is_success() {
+                    if let Ok(text) = resp.text().await {
+                        let _ = std::fs::write(&deps_path, text);
+                    }
+                }
+            }
+        });
+    }
 
-        let body: Value = resp
-            .json()
-            .await
-            .context("failed to parse Initializr metadata")?;
+    pub async fn fetch_initializr_metadata(client: &reqwest::Client) -> Result<InitializrMetadata> {
+        // Ensure local defaults exist before reading
+        let _ = Self::ensure_local_metadata();
+
+        // Trigger an async background sync every time we need metadata
+        // (This way we gradually stay updated)
+        Self::sync_metadata_from_github(client.clone());
+
+        let meta_path = Self::initializr_metadata_path();
+        let data = std::fs::read_to_string(&meta_path).context("failed to read local metadata file")?;
+        let body: Value = serde_json::from_str(&data).context("failed to parse local metadata JSON")?;
 
         let parsed = Self::parse_initializr_metadata(&body)?;
-
-        // Write cache
-        if let Some(parent) = cache_path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        if let Ok(serialized) = serde_json::to_string_pretty(&parsed) {
-            let _ = std::fs::write(&cache_path, serialized);
-        }
-
         Ok(parsed)
     }
 
