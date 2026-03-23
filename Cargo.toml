@@ -24,4 +24,4 @@ serde_json = "1.0.149"
 serde_yaml = "0.9"
 tokio = { version = "1.49.0", features = ["full"] }
 urlencoding = "2.1"
-zip = "2"
+zip = "8"
