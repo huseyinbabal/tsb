@@ -1,0 +1,43 @@
+name: Sync Spring Initializr Metadata
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Run nightly at midnight UTC
+  workflow_dispatch: # Allow manual trigger via GitHub Actions UI
+
+permissions:
+  contents: write # Needed to push changes back to the repository
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create resources folder
+        run: mkdir -p resources
+
+      - name: Fetch and format Initializr metadata
+        run: |
+          echo "Fetching metadata from start.spring.io/metadata/client..."
+          # Fetch the raw JSON matching the app's behavior
+          curl -sS -H "Accept: application/json" "https://start.spring.io/metadata/client" -o resources/initializr-metadata.raw.json
+          
+          # Use jq to format the JSON. This ensures the diff is readable and prevents noisy commits due to whitespace changes.
+          jq . resources/initializr-metadata.raw.json > resources/initializr-metadata.json
+          rm resources/initializr-metadata.raw.json
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add resources/initializr-metadata.json
+          
+          if git diff --staged --quiet; then
+            echo "No changes in metadata found. Skipping commit."
+          else
+            git commit -m "chore: sync Spring Initializr metadata [skip ci]"
+            git push
+            echo "Successfully updated and pushed new Initializr metadata."
+          fi

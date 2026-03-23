@@ -1,0 +1,23 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    uses: huseyinbabal/rust-actions/.github/workflows/release.yml@main
+    with:
+      crate_name: tsb
+      description: "Terminal UI for Spring Boot - A modern TUI for managing Spring Boot applications"
+      homepage: "https://github.com/huseyinbabal/tsb"
+      docker_image: tsb
+    secrets:
+      CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}

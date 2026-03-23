@@ -1,0 +1,27 @@
+[package]
+name = "tsb"
+version = "0.1.0"
+edition = "2021"
+description = "Terminal UI for Spring Boot - A modern TUI for managing Spring Boot applications"
+license = "MIT"
+repository = "https://github.com/huseyinbabal/tsb"
+homepage = "https://github.com/huseyinbabal/tsb"
+keywords = ["spring-boot", "tui", "terminal", "actuator", "cli"]
+categories = ["command-line-utilities"]
+readme = "README.md"
+authors = ["Huseyin Babal"]
+
+[dependencies]
+anyhow = "1.0.100"
+chrono = "0.4.43"
+clap = { version = "4.5.56", features = ["derive"] }
+crossterm = "0.29.0"
+dirs = "6.0"
+ratatui = "0.30.0"
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+serde_yaml = "0.9"
+tokio = { version = "1.49.0", features = ["full"] }
+urlencoding = "2.1"
+zip = "2"

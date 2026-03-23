@@ -1,0 +1,20 @@
+name: PR Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
+jobs:
+  check:
+    uses: huseyinbabal/rust-actions/.github/workflows/pr-check.yml@main
+    with:
+      check_issue_link: true
+      run_tests: true
+      run_fmt: true
+      run_clippy: true
+      run_security_scan: true
