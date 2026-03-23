@@ -21,23 +21,25 @@ jobs:
       - name: Fetch and format Initializr metadata
         run: |
           echo "Fetching metadata from start.spring.io/metadata/client..."
-          # Fetch the raw JSON matching the app's behavior
           curl -sS -H "Accept: application/json" "https://start.spring.io/metadata/client" -o resources/initializr-metadata.raw.json
-          
-          # Use jq to format the JSON. This ensures the diff is readable and prevents noisy commits due to whitespace changes.
           jq . resources/initializr-metadata.raw.json > resources/initializr-metadata.json
-          rm resources/initializr-metadata.raw.json
+          
+          echo "Fetching dependencies from start.spring.io/dependencies..."
+          curl -sS -H "Accept: application/vnd.initializr.v2.2+json" "https://start.spring.io/dependencies" -o resources/dependencies.raw.json
+          jq . resources/dependencies.raw.json > resources/dependencies.json
+          
+          rm resources/*.raw.json
 
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add resources/initializr-metadata.json
+          git add resources/initializr-metadata.json resources/dependencies.json
           
           if git diff --staged --quiet; then
             echo "No changes in metadata found. Skipping commit."
           else
-            git commit -m "chore: sync Spring Initializr metadata [skip ci]"
+            git commit -m "chore: sync Spring Initializr metadata and dependencies [skip ci]"
             git push
             echo "Successfully updated and pushed new Initializr metadata."
           fi
