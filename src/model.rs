@@ -145,6 +145,7 @@ pub struct InitializrMetadata {
 pub struct NewProjectParams {
     pub boot_version: String,
     pub language: String,
+    #[allow(dead_code)]
     pub packaging: String,
     pub java_version: String,
     pub project_type: String,

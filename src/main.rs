@@ -1,5 +1,6 @@
 mod app;
 mod config;
+mod generator;
 mod initializr;
 mod model;
 mod ui;
@@ -1512,13 +1513,12 @@ async fn handle_new_project_key(app: &mut App, key: KeyCode, tx: mpsc::Sender<Ap
                     };
 
                     app.new_project_state.step = WizardStep::Generating;
-                    app.new_project_state.gen_progress = "Downloading project...".into();
+                    app.new_project_state.gen_progress = "Generating project...".into();
                     app.new_project_state.gen_done = false;
 
                     let tx_clone = tx;
-                    let http_client = app.http_client.clone();
                     tokio::spawn(async move {
-                        let result = App::generate_project(&http_client, &params).await;
+                        let result = App::generate_project(&params);
                         let _ = tx_clone
                             .send(AppEvent::GenerateResult(
                                 result.map_err(|e| format!("{}", e)),

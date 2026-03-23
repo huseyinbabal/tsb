@@ -74,10 +74,7 @@ fn render_project_info(f: &mut Frame, state: &NewProjectWizardState) {
         let spinner = spinner_chars[frame % spinner_chars.len()];
         let loading = Paragraph::new(Line::from(vec![
             Span::styled(format!("  {} ", spinner), Style::default().fg(SPRING_GREEN)),
-            Span::styled(
-                "Loading metadata from start.spring.io...",
-                Style::default().fg(Color::Gray),
-            ),
+            Span::styled("Loading metadata...", Style::default().fg(Color::Gray)),
         ]))
         .alignment(Alignment::Center);
         f.render_widget(loading, inner);

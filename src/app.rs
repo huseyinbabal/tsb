@@ -1291,7 +1291,7 @@ impl App {
         Ok(parsed)
     }
 
-    /// Parse the raw JSON from `start.spring.io/metadata/client` into our
+    /// Parse the raw JSON from the initializr metadata into our
     /// `InitializrMetadata` struct.
     fn parse_initializr_metadata(body: &Value) -> Result<InitializrMetadata> {
         fn extract_options(body: &Value, key: &str) -> (Vec<InitializrOption>, String) {
@@ -1377,103 +1377,7 @@ impl App {
 
     /// Download a project zip from Spring Initializr and extract it to the
     /// specified output directory. Returns the path of the extracted project.
-    /// Normalize a Spring Boot version id from the metadata format to the
-    /// format the starter.zip API actually accepts:
-    ///   - `4.0.3.RELEASE`        → `4.0.3`
-    ///   - `4.0.4.BUILD-SNAPSHOT` → `4.0.4-SNAPSHOT`
-    ///   - `4.1.0.M2`             → `4.1.0-M2`
-    ///   - `4.1.0.RC1`            → `4.1.0-RC1`
-    fn normalize_boot_version(raw: &str) -> String {
-        if let Some(base) = raw.strip_suffix(".RELEASE") {
-            return base.to_string();
-        }
-        if let Some(base) = raw.strip_suffix(".BUILD-SNAPSHOT") {
-            return format!("{}-SNAPSHOT", base);
-        }
-        // Handle milestone / RC suffixes like ".M2" or ".RC1"
-        if let Some(dot_pos) = raw.rfind('.') {
-            let suffix = &raw[dot_pos + 1..];
-            if suffix.starts_with('M') || suffix.starts_with("RC") {
-                let base = &raw[..dot_pos];
-                return format!("{}-{}", base, suffix);
-            }
-        }
-        raw.to_string()
-    }
-
-    pub async fn generate_project(
-        client: &reqwest::Client,
-        params: &NewProjectParams,
-    ) -> Result<String> {
-        // Build query string
-        let deps = params.dependencies.join(",");
-        let boot_version = Self::normalize_boot_version(&params.boot_version);
-        let url = format!(
-            "https://start.spring.io/starter.zip?\
-             type={}&language={}&bootVersion={}&\
-             groupId={}&artifactId={}&name={}&\
-             description={}&packageName={}&packaging={}&\
-             javaVersion={}&dependencies={}",
-            urlencoding::encode(&params.project_type),
-            urlencoding::encode(&params.language),
-            urlencoding::encode(&boot_version),
-            urlencoding::encode(&params.group_id),
-            urlencoding::encode(&params.artifact_id),
-            urlencoding::encode(&params.name),
-            urlencoding::encode(&params.description),
-            urlencoding::encode(&params.package_name),
-            urlencoding::encode(&params.packaging),
-            urlencoding::encode(&params.java_version),
-            urlencoding::encode(&deps),
-        );
-
-        let resp = client
-            .get(&url)
-            .send()
-            .await
-            .context("failed to download project from Spring Initializr")?;
-
-        if !resp.status().is_success() {
-            anyhow::bail!("Spring Initializr returned status {}", resp.status());
-        }
-
-        let bytes = resp
-            .bytes()
-            .await
-            .context("failed to read project zip body")?;
-
-        // Determine output directory
-        let output_base = if params.output_dir.is_empty() || params.output_dir == "." {
-            std::env::current_dir().context("failed to get current directory")?
-        } else {
-            PathBuf::from(&params.output_dir)
-        };
-
-        let project_dir = output_base.join(&params.artifact_id);
-        std::fs::create_dir_all(&project_dir)
-            .with_context(|| format!("failed to create directory {}", project_dir.display()))?;
-
-        // Extract zip
-        let cursor = std::io::Cursor::new(bytes.as_ref());
-        let mut archive = zip::ZipArchive::new(cursor).context("failed to read zip archive")?;
-
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i).context("failed to read zip entry")?;
-            let out_path = project_dir.join(file.name());
-
-            if file.is_dir() {
-                std::fs::create_dir_all(&out_path)
-                    .with_context(|| format!("failed to create dir {}", out_path.display()))?;
-            } else {
-                if let Some(parent) = out_path.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                let mut outfile = std::fs::File::create(&out_path)
-                    .with_context(|| format!("failed to create {}", out_path.display()))?;
-                std::io::copy(&mut file, &mut outfile)?;
-            }
-        }
-
-        Ok(project_dir.to_string_lossy().to_string())
+    pub fn generate_project(params: &NewProjectParams) -> Result<String> {
+        crate::generator::generate_project(params)
     }
 }

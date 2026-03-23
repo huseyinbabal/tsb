@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>{{ boot_version }}</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>{{ group_id }}</groupId>
+	<artifactId>{{ artifact_id }}</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>{{ name }}</name>
+	<description>{{ description }}</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>{{ java_version }}</java.version>
+{%- for key, value in extra_properties %}
+		<{{ key }}>{{ value }}</{{ key }}>
+{%- endfor %}
+	</properties>
+	<dependencies>
+{%- for dep in compile_deps %}
+		<dependency>
+			<groupId>{{ dep.group_id }}</groupId>
+			<artifactId>{{ dep.artifact_id }}</artifactId>
+{%- if dep.version %}
+			<version>{{ dep.version }}</version>
+{%- endif %}
+		</dependency>
+{%- endfor %}
+{%- for dep in runtime_deps %}
+		<dependency>
+			<groupId>{{ dep.group_id }}</groupId>
+			<artifactId>{{ dep.artifact_id }}</artifactId>
+{%- if dep.version %}
+			<version>{{ dep.version }}</version>
+{%- endif %}
+			<scope>runtime</scope>
+		</dependency>
+{%- endfor %}
+{%- for dep in annotation_processor_deps %}
+		<dependency>
+			<groupId>{{ dep.group_id }}</groupId>
+			<artifactId>{{ dep.artifact_id }}</artifactId>
+{%- if dep.version %}
+			<version>{{ dep.version }}</version>
+{%- endif %}
+			<optional>true</optional>
+		</dependency>
+{%- endfor %}
+{%- for dep in test_deps %}
+		<dependency>
+			<groupId>{{ dep.group_id }}</groupId>
+			<artifactId>{{ dep.artifact_id }}</artifactId>
+{%- if dep.version %}
+			<version>{{ dep.version }}</version>
+{%- endif %}
+			<scope>test</scope>
+		</dependency>
+{%- endfor %}
+	</dependencies>
+{%- if boms %}
+
+	<dependencyManagement>
+		<dependencies>
+{%- for bom in boms %}
+			<dependency>
+				<groupId>{{ bom.group_id }}</groupId>
+				<artifactId>{{ bom.artifact_id }}</artifactId>
+				<version>{{ bom.version }}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+{%- endfor %}
+		</dependencies>
+	</dependencyManagement>
+{%- endif %}
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+{%- if repositories %}
+
+	<repositories>
+{%- for repo in repositories %}
+		<repository>
+			<id>{{ repo.id }}</id>
+			<name>{{ repo.name }}</name>
+			<url>{{ repo.url }}</url>
+			<snapshots>
+				<enabled>{{ repo.snapshot_enabled }}</enabled>
+			</snapshots>
+		</repository>
+{%- endfor %}
+	</repositories>
+{%- endif %}
+
+</project>

@@ -29,9 +29,9 @@ pub async fn run() -> Result<()> {
     // Banner
     print_banner(&mut stdout)?;
 
-    // Fetch metadata
+    // Load metadata from local cache
     println!();
-    print_step(&mut stdout, "Fetching metadata from start.spring.io...")?;
+    print_step(&mut stdout, "Loading metadata...")?;
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -115,9 +115,9 @@ pub async fn run() -> Result<()> {
         return Ok(());
     }
 
-    // -- Generate (send API ids, not display names) --
+    // -- Generate project locally --
     println!();
-    print_step(&mut stdout, "Downloading and extracting project...")?;
+    print_step(&mut stdout, "Generating project...")?;
 
     let params = NewProjectParams {
         boot_version: boot_version_id,
@@ -135,7 +135,7 @@ pub async fn run() -> Result<()> {
         output_dir,
     };
 
-    let path = App::generate_project(&client, &params).await?;
+    let path = App::generate_project(&params)?;
     println!();
     print_success(&mut stdout, &format!("Project created at: {}", path))?;
     println!();
