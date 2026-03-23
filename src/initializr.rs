@@ -307,6 +307,7 @@ fn text_prompt(out: &mut impl Write, label: &str, default: &str) -> Result<Strin
     let mut value = default.to_string();
 
     terminal::enable_raw_mode()?;
+    execute!(out, cursor::Hide)?;
     render_text_line(out, label, &value)?;
 
     loop {
@@ -319,6 +320,7 @@ fn text_prompt(out: &mut impl Write, label: &str, default: &str) -> Result<Strin
                         render_text_line(out, label, &value)?;
                     }
                     KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        execute!(out, cursor::Show)?;
                         terminal::disable_raw_mode()?;
                         anyhow::bail!("interrupted");
                     }
@@ -336,6 +338,7 @@ fn text_prompt(out: &mut impl Write, label: &str, default: &str) -> Result<Strin
         }
     }
 
+    execute!(out, cursor::Show)?;
     terminal::disable_raw_mode()?;
 
     // Finalize line
