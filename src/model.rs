@@ -113,6 +113,7 @@ pub struct InitializrDependencyGroup {
 
 /// A text field with a default value (groupId, artifactId, etc.).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct InitializrTextField {
     pub default: String,
 }
@@ -149,6 +150,7 @@ pub struct NewProjectParams {
     pub project_type: String,
     pub group_id: String,
     pub artifact_id: String,
+    #[allow(dead_code)]
     pub version: String,
     pub name: String,
     pub description: String,

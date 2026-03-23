@@ -50,22 +50,12 @@ pub struct ResourceItem {
 pub const LOG_LEVELS: &[&str] = &["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "OFF"];
 
 /// State for the logger level editor overlay.
+#[derive(Default)]
 pub struct EditLoggerState {
     pub logger_name: String,
     pub current_level: String,
     pub selected_level_index: usize,
     pub error: Option<String>,
-}
-
-impl Default for EditLoggerState {
-    fn default() -> Self {
-        Self {
-            logger_name: String::new(),
-            current_level: String::new(),
-            selected_level_index: 0,
-            error: None,
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -275,6 +265,7 @@ pub struct App {
     pub loggers: Vec<Logger>,
     pub mappings: Vec<Mapping>,
     pub env_props: Vec<EnvProperty>,
+    #[allow(dead_code)]
     pub server_info: Option<ServerInfo>,
 
     // -- selection indices ---------------------------------------------------
@@ -313,7 +304,9 @@ pub struct App {
     pub error_message: Option<String>,
     pub modal_title: String,
     pub modal_msg: String,
+    #[allow(dead_code)]
     pub width: u16,
+    #[allow(dead_code)]
     pub height: u16,
     pub spinner_frame: usize,
 
@@ -333,8 +326,10 @@ pub struct App {
 const EMBEDDED_METADATA: &str = include_str!("../resources/initializr-metadata.json");
 const EMBEDDED_DEPENDENCIES: &str = include_str!("../resources/dependencies.json");
 
-const GITHUB_METADATA_URL: &str = "https://raw.githubusercontent.com/huseyinbabal/tsb/main/resources/initializr-metadata.json";
-const GITHUB_DEPENDENCIES_URL: &str = "https://raw.githubusercontent.com/huseyinbabal/tsb/main/resources/dependencies.json";
+const GITHUB_METADATA_URL: &str =
+    "https://raw.githubusercontent.com/huseyinbabal/tsb/main/resources/initializr-metadata.json";
+const GITHUB_DEPENDENCIES_URL: &str =
+    "https://raw.githubusercontent.com/huseyinbabal/tsb/main/resources/dependencies.json";
 impl App {
     // -----------------------------------------------------------------------
     // Constructor
@@ -746,7 +741,9 @@ impl App {
         if let Some(ref url) = self.config.active_app_url {
             return Some(url.clone());
         }
-        self.apps.get(self.selected_app_index).map(|a| a.url.clone())
+        self.apps
+            .get(self.selected_app_index)
+            .map(|a| a.url.clone())
     }
 
     /// Display name of the currently active app.
@@ -767,6 +764,7 @@ impl App {
     // -----------------------------------------------------------------------
 
     /// Check the health of a Spring Boot app via `/actuator/health`.
+    #[allow(dead_code)]
     pub async fn check_health(&self, url: &str) -> Result<AppStatus> {
         let endpoint = format!("{}/actuator/health", url.trim_end_matches('/'));
         let resp = self
@@ -780,7 +778,10 @@ impl App {
             return Ok(AppStatus::Down);
         }
 
-        let body: Value = resp.json().await.context("failed to parse health response")?;
+        let body: Value = resp
+            .json()
+            .await
+            .context("failed to parse health response")?;
         match body.get("status").and_then(|s| s.as_str()) {
             Some("UP") => Ok(AppStatus::Up),
             Some("DOWN") => Ok(AppStatus::Down),
@@ -790,9 +791,7 @@ impl App {
 
     /// Set the level of a logger via POST to `/actuator/loggers/{name}`.
     pub async fn set_logger_level(&mut self, logger_name: &str, level: &str) -> Result<()> {
-        let base_url = self
-            .active_app_url()
-            .context("no active app selected")?;
+        let base_url = self.active_app_url().context("no active app selected")?;
         let endpoint = format!(
             "{}/actuator/loggers/{}",
             base_url.trim_end_matches('/'),
@@ -812,10 +811,7 @@ impl App {
             .context("failed to set logger level")?;
 
         if !resp.status().is_success() {
-            anyhow::bail!(
-                "set logger level failed with status {}",
-                resp.status()
-            );
+            anyhow::bail!("set logger level failed with status {}", resp.status());
         }
 
         // Update local state
@@ -833,9 +829,7 @@ impl App {
 
     /// Fetch the list of actuator endpoints from `/actuator`.
     pub async fn fetch_endpoints(&mut self) -> Result<()> {
-        let base_url = self
-            .active_app_url()
-            .context("no active app selected")?;
+        let base_url = self.active_app_url().context("no active app selected")?;
         let endpoint = format!("{}/actuator", base_url.trim_end_matches('/'));
         let resp = self
             .http_client
@@ -844,7 +838,10 @@ impl App {
             .await
             .context("failed to fetch actuator index")?;
 
-        let body: Value = resp.json().await.context("failed to parse actuator index")?;
+        let body: Value = resp
+            .json()
+            .await
+            .context("failed to parse actuator index")?;
 
         let mut endpoints = Vec::new();
         if let Some(links) = body.get("_links").and_then(|l| l.as_object()) {
@@ -868,9 +865,7 @@ impl App {
 
     /// Fetch Spring beans from `/actuator/beans`.
     pub async fn fetch_beans(&mut self) -> Result<()> {
-        let base_url = self
-            .active_app_url()
-            .context("no active app selected")?;
+        let base_url = self.active_app_url().context("no active app selected")?;
         let endpoint = format!("{}/actuator/beans", base_url.trim_end_matches('/'));
         let resp = self
             .http_client
@@ -879,7 +874,10 @@ impl App {
             .await
             .context("failed to fetch beans")?;
 
-        let body: Value = resp.json().await.context("failed to parse beans response")?;
+        let body: Value = resp
+            .json()
+            .await
+            .context("failed to parse beans response")?;
 
         let mut beans = Vec::new();
         if let Some(contexts) = body.get("contexts").and_then(|c| c.as_object()) {
@@ -913,9 +911,7 @@ impl App {
 
     /// Fetch loggers from `/actuator/loggers`.
     pub async fn fetch_loggers(&mut self) -> Result<()> {
-        let base_url = self
-            .active_app_url()
-            .context("no active app selected")?;
+        let base_url = self.active_app_url().context("no active app selected")?;
         let endpoint = format!("{}/actuator/loggers", base_url.trim_end_matches('/'));
         let resp = self
             .http_client
@@ -924,7 +920,10 @@ impl App {
             .await
             .context("failed to fetch loggers")?;
 
-        let body: Value = resp.json().await.context("failed to parse loggers response")?;
+        let body: Value = resp
+            .json()
+            .await
+            .context("failed to parse loggers response")?;
 
         let mut loggers = Vec::new();
         if let Some(logger_map) = body.get("loggers").and_then(|l| l.as_object()) {
@@ -953,9 +952,7 @@ impl App {
 
     /// Fetch HTTP request mappings from `/actuator/mappings`.
     pub async fn fetch_mappings(&mut self) -> Result<()> {
-        let base_url = self
-            .active_app_url()
-            .context("no active app selected")?;
+        let base_url = self.active_app_url().context("no active app selected")?;
         let endpoint = format!("{}/actuator/mappings", base_url.trim_end_matches('/'));
         let resp = self
             .http_client
@@ -964,7 +961,10 @@ impl App {
             .await
             .context("failed to fetch mappings")?;
 
-        let body: Value = resp.json().await.context("failed to parse mappings response")?;
+        let body: Value = resp
+            .json()
+            .await
+            .context("failed to parse mappings response")?;
 
         let mut mappings = Vec::new();
         // Structure: contexts -> {ctx} -> mappings -> {category} -> {name} -> [array]
@@ -980,13 +980,14 @@ impl App {
                         // category_val may be:
                         //  - an object with named arrays (dispatcherServlets -> {dispatcherServlet: [...]})
                         //  - a direct array (servletFilters -> [...])
-                        let arrays_to_scan: Vec<&Value> = if let Some(obj) = category_val.as_object() {
-                            obj.values().collect()
-                        } else if category_val.is_array() {
-                            vec![category_val]
-                        } else {
-                            continue;
-                        };
+                        let arrays_to_scan: Vec<&Value> =
+                            if let Some(obj) = category_val.as_object() {
+                                obj.values().collect()
+                            } else if category_val.is_array() {
+                                vec![category_val]
+                            } else {
+                                continue;
+                            };
 
                         for arr_val in arrays_to_scan {
                             if let Some(arr) = arr_val.as_array() {
@@ -996,7 +997,8 @@ impl App {
                                         .and_then(|p| p.as_str())
                                         .unwrap_or_else(|| {
                                             // Some entries use "details.requestMappingConditions.patterns"
-                                            entry.get("details")
+                                            entry
+                                                .get("details")
                                                 .and_then(|d| d.get("requestMappingConditions"))
                                                 .and_then(|r| r.get("patterns"))
                                                 .and_then(|p| p.as_array())
@@ -1010,9 +1012,12 @@ impl App {
                                         .and_then(|h| h.as_str())
                                         .unwrap_or_else(|| {
                                             // servletFilters use "servletNameMappings" or "urlPatternMappings"
-                                            entry.get("name")
+                                            entry
+                                                .get("name")
                                                 .and_then(|n| n.as_str())
-                                                .or_else(|| entry.get("className").and_then(|c| c.as_str()))
+                                                .or_else(|| {
+                                                    entry.get("className").and_then(|c| c.as_str())
+                                                })
                                                 .unwrap_or("unknown")
                                         })
                                         .to_string();
@@ -1032,9 +1037,7 @@ impl App {
 
     /// Fetch environment properties from `/actuator/env`.
     pub async fn fetch_env(&mut self) -> Result<()> {
-        let base_url = self
-            .active_app_url()
-            .context("no active app selected")?;
+        let base_url = self.active_app_url().context("no active app selected")?;
         let endpoint = format!("{}/actuator/env", base_url.trim_end_matches('/'));
         let resp = self
             .http_client
@@ -1084,9 +1087,7 @@ impl App {
     /// Fetch a thread dump from `/actuator/threaddump`, save to file, and
     /// track it in `saved_thread_dumps`. Returns the saved file path.
     pub async fn fetch_and_save_thread_dump(&mut self) -> Result<String> {
-        let base_url = self
-            .active_app_url()
-            .context("no active app selected")?;
+        let base_url = self.active_app_url().context("no active app selected")?;
         let app_name = self.current_server_name();
         let endpoint = format!("{}/actuator/threaddump", base_url.trim_end_matches('/'));
         let resp = self
@@ -1102,8 +1103,7 @@ impl App {
             .context("failed to parse thread dump response")?;
 
         // Save raw JSON to file
-        let raw_json = serde_json::to_string_pretty(&body)
-            .unwrap_or_else(|_| body.to_string());
+        let raw_json = serde_json::to_string_pretty(&body).unwrap_or_else(|_| body.to_string());
         let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
         let filename = format!("threaddump_{}.json", timestamp);
         let dir = Self::dumps_dir()?;
@@ -1132,9 +1132,7 @@ impl App {
     /// Trigger a heap dump download from `/actuator/heapdump`, save to
     /// a local file, and track it in `saved_heap_dumps`. Returns the path.
     pub async fn download_heap_dump(&mut self) -> Result<String> {
-        let base_url = self
-            .active_app_url()
-            .context("no active app selected")?;
+        let base_url = self.active_app_url().context("no active app selected")?;
         let app_name = self.current_server_name();
         let endpoint = format!("{}/actuator/heapdump", base_url.trim_end_matches('/'));
 
@@ -1284,8 +1282,10 @@ impl App {
         Self::sync_metadata_from_github(client.clone());
 
         let meta_path = Self::initializr_metadata_path();
-        let data = std::fs::read_to_string(&meta_path).context("failed to read local metadata file")?;
-        let body: Value = serde_json::from_str(&data).context("failed to parse local metadata JSON")?;
+        let data =
+            std::fs::read_to_string(&meta_path).context("failed to read local metadata file")?;
+        let body: Value =
+            serde_json::from_str(&data).context("failed to parse local metadata JSON")?;
 
         let parsed = Self::parse_initializr_metadata(&body)?;
         Ok(parsed)
@@ -1296,10 +1296,7 @@ impl App {
     fn parse_initializr_metadata(body: &Value) -> Result<InitializrMetadata> {
         fn extract_options(body: &Value, key: &str) -> (Vec<InitializrOption>, String) {
             let section = &body[key];
-            let default = section["default"]
-                .as_str()
-                .unwrap_or("")
-                .to_string();
+            let default = section["default"].as_str().unwrap_or("").to_string();
             let values = section["values"]
                 .as_array()
                 .map(|arr| {
@@ -1315,10 +1312,7 @@ impl App {
         }
 
         fn extract_text_default(body: &Value, key: &str) -> String {
-            body[key]["default"]
-                .as_str()
-                .unwrap_or("")
-                .to_string()
+            body[key]["default"].as_str().unwrap_or("").to_string()
         }
 
         let (boot_versions, boot_version_default) = extract_options(body, "bootVersion");
@@ -1440,10 +1434,7 @@ impl App {
             .context("failed to download project from Spring Initializr")?;
 
         if !resp.status().is_success() {
-            anyhow::bail!(
-                "Spring Initializr returned status {}",
-                resp.status()
-            );
+            anyhow::bail!("Spring Initializr returned status {}", resp.status());
         }
 
         let bytes = resp
@@ -1464,8 +1455,7 @@ impl App {
 
         // Extract zip
         let cursor = std::io::Cursor::new(bytes.as_ref());
-        let mut archive = zip::ZipArchive::new(cursor)
-            .context("failed to read zip archive")?;
+        let mut archive = zip::ZipArchive::new(cursor).context("failed to read zip archive")?;
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).context("failed to read zip entry")?;

@@ -11,12 +11,12 @@ use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyModifiers},
     execute,
-    style::{Attribute, Color, Print, SetAttribute, SetForegroundColor, ResetColor},
+    style::{Attribute, Color, Print, ResetColor, SetAttribute, SetForegroundColor},
     terminal::{self, ClearType},
 };
 
 use crate::app::App;
-use crate::model::{InitializrOption, InitializrDependencyGroup, NewProjectParams};
+use crate::model::{InitializrDependencyGroup, InitializrOption, NewProjectParams};
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -43,11 +43,36 @@ pub async fn run() -> Result<()> {
 
     // -- Step 1: Select fields --
     // select_option returns (id, name) — id goes to the API, name is for display.
-    let (boot_version_id, boot_version_name) = select_option(&mut stdout, "Spring Boot", &meta.boot_versions, &meta.boot_version_default)?;
-    let (language_id, language_name) = select_option(&mut stdout, "Language", &meta.languages, &meta.language_default)?;
-    let (packaging_id, packaging_name) = select_option(&mut stdout, "Packaging", &meta.packagings, &meta.packaging_default)?;
-    let (java_version_id, java_version_name) = select_option(&mut stdout, "Java Version", &meta.java_versions, &meta.java_version_default)?;
-    let (project_type_id, project_type_name) = select_option(&mut stdout, "Project Type", &meta.project_types, &meta.project_type_default)?;
+    let (boot_version_id, boot_version_name) = select_option(
+        &mut stdout,
+        "Spring Boot",
+        &meta.boot_versions,
+        &meta.boot_version_default,
+    )?;
+    let (language_id, language_name) = select_option(
+        &mut stdout,
+        "Language",
+        &meta.languages,
+        &meta.language_default,
+    )?;
+    let (packaging_id, packaging_name) = select_option(
+        &mut stdout,
+        "Packaging",
+        &meta.packagings,
+        &meta.packaging_default,
+    )?;
+    let (java_version_id, java_version_name) = select_option(
+        &mut stdout,
+        "Java Version",
+        &meta.java_versions,
+        &meta.java_version_default,
+    )?;
+    let (project_type_id, project_type_name) = select_option(
+        &mut stdout,
+        "Project Type",
+        &meta.project_types,
+        &meta.project_type_default,
+    )?;
 
     // -- Step 2: Text fields --
     println!();
@@ -69,9 +94,18 @@ pub async fn run() -> Result<()> {
     println!();
     print_summary(
         &mut stdout,
-        &boot_version_name, &language_name, &packaging_name, &java_version_name, &project_type_name,
-        &group_id, &artifact_id, &name, &description, &package_name,
-        &selected_deps, &output_dir,
+        &boot_version_name,
+        &language_name,
+        &packaging_name,
+        &java_version_name,
+        &project_type_name,
+        &group_id,
+        &artifact_id,
+        &name,
+        &description,
+        &package_name,
+        &selected_deps,
+        &output_dir,
     )?;
 
     // -- Confirm --
@@ -114,7 +148,11 @@ pub async fn run() -> Result<()> {
 // ---------------------------------------------------------------------------
 
 fn print_banner(out: &mut impl Write) -> Result<()> {
-    let green = Color::Rgb { r: 80, g: 200, b: 50 };
+    let green = Color::Rgb {
+        r: 80,
+        g: 200,
+        b: 50,
+    };
     execute!(
         out,
         SetForegroundColor(green),
@@ -170,10 +208,7 @@ fn select_option(
         return Ok((default.to_string(), default.to_string()));
     }
 
-    let mut selected = options
-        .iter()
-        .position(|o| o.id == default)
-        .unwrap_or(0);
+    let mut selected = options.iter().position(|o| o.id == default).unwrap_or(0);
 
     terminal::enable_raw_mode()?;
 
@@ -185,7 +220,11 @@ fn select_option(
             if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Left | KeyCode::Char('h') => {
-                        selected = if selected == 0 { options.len() - 1 } else { selected - 1 };
+                        selected = if selected == 0 {
+                            options.len() - 1
+                        } else {
+                            selected - 1
+                        };
                         render_select_line(out, label, options, selected)?;
                     }
                     KeyCode::Right | KeyCode::Char('l') => {
@@ -244,7 +283,11 @@ fn render_select_line(
         SetAttribute(Attribute::Reset),
         SetForegroundColor(Color::DarkGrey),
         Print("◂ "),
-        SetForegroundColor(Color::Rgb { r: 80, g: 200, b: 50 }),
+        SetForegroundColor(Color::Rgb {
+            r: 80,
+            g: 200,
+            b: 50
+        }),
         SetAttribute(Attribute::Bold),
         Print(&options[selected].name),
         SetAttribute(Attribute::Reset),
@@ -398,7 +441,8 @@ fn select_dependencies(
         let start = if filtered_indices.is_empty() {
             0
         } else {
-            cursor_pos.saturating_sub(page_size / 2)
+            cursor_pos
+                .saturating_sub(page_size / 2)
                 .min(filtered_indices.len().saturating_sub(page_size))
         };
         let end = (start + page_size).min(filtered_indices.len());
@@ -410,6 +454,7 @@ fn select_dependencies(
         render_dep_header(out, &filter, filter_active, selected_count)?;
 
         // Render visible deps
+        #[allow(clippy::needless_range_loop)]
         for vi in start..end {
             let di = filtered_indices[vi];
             let (group, _id, name, desc) = all_deps[di];
@@ -420,11 +465,7 @@ fn select_dependencies(
 
         // Padding
         for _ in end..(start + page_size) {
-            execute!(
-                out,
-                Print("\r\n"),
-                terminal::Clear(ClearType::CurrentLine),
-            )?;
+            execute!(out, Print("\r\n"), terminal::Clear(ClearType::CurrentLine),)?;
         }
 
         // Hint line
@@ -476,7 +517,9 @@ fn select_dependencies(
                 } else {
                     match key.code {
                         KeyCode::Char('j') | KeyCode::Down => {
-                            if !filtered_indices.is_empty() && cursor_pos + 1 < filtered_indices.len() {
+                            if !filtered_indices.is_empty()
+                                && cursor_pos + 1 < filtered_indices.len()
+                            {
                                 cursor_pos += 1;
                             }
                         }
@@ -509,11 +552,7 @@ fn select_dependencies(
     // Clear rendered area
     let total_lines = page_size + 2;
     for _ in 0..total_lines {
-        execute!(
-            out,
-            terminal::Clear(ClearType::CurrentLine),
-            Print("\r\n"),
-        )?;
+        execute!(out, terminal::Clear(ClearType::CurrentLine), Print("\r\n"),)?;
     }
     // Move back up
     execute!(out, cursor::MoveUp(total_lines as u16), Print("\r"))?;
@@ -636,16 +675,28 @@ fn render_dep_line(
     let checkbox = if is_selected { "✓" } else { " " };
 
     let pointer_color = if is_current {
-        Color::Rgb { r: 80, g: 200, b: 50 }
+        Color::Rgb {
+            r: 80,
+            g: 200,
+            b: 50,
+        }
     } else {
         Color::DarkGrey
     };
     let check_color = if is_selected {
-        Color::Rgb { r: 80, g: 200, b: 50 }
+        Color::Rgb {
+            r: 80,
+            g: 200,
+            b: 50,
+        }
     } else {
         Color::DarkGrey
     };
-    let name_color = if is_current { Color::White } else { Color::Grey };
+    let name_color = if is_current {
+        Color::White
+    } else {
+        Color::Grey
+    };
 
     // Truncate description
     let short_desc: String = if desc.len() > 45 {
@@ -670,7 +721,11 @@ fn render_dep_line(
         SetForegroundColor(check_color),
         Print(format!("[{}] ", checkbox)),
         SetForegroundColor(name_color),
-        SetAttribute(if is_current { Attribute::Bold } else { Attribute::Reset }),
+        SetAttribute(if is_current {
+            Attribute::Bold
+        } else {
+            Attribute::Reset
+        }),
         Print(format!("{:<30}", name)),
         SetAttribute(Attribute::Reset),
         SetForegroundColor(Color::DarkGrey),
@@ -727,6 +782,7 @@ fn confirm_prompt(out: &mut impl Write, message: &str) -> Result<bool> {
 // Summary
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::too_many_arguments)]
 fn print_summary(
     out: &mut impl Write,
     boot_version: &str,

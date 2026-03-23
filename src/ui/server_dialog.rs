@@ -286,7 +286,7 @@ fn render_scanning(f: &mut Frame, state: &ServerDialogState) {
 // ---------------------------------------------------------------------------
 
 fn render_scan_results(f: &mut Frame, state: &ServerDialogState) {
-    let height = (state.discovered_apps.len() as u16 + 6).min(20).max(8);
+    let height = (state.discovered_apps.len() as u16 + 6).clamp(8, 20);
     let area = centered_rect(60, height, f.area());
     f.render_widget(Clear, area);
 

@@ -55,6 +55,7 @@ enum AppEvent {
     /// All initial health checks done — transition out of splash
     SplashDone,
     /// Actuator data fetched for a resource
+    #[allow(dead_code)]
     DataFetched {
         resource: String,
         result: Result<(), String>,
@@ -70,7 +71,7 @@ enum AppEvent {
     /// Port scan is complete
     ScanDone,
     /// Initializr metadata loaded successfully
-    MetadataLoaded(crate::model::InitializrMetadata),
+    MetadataLoaded(Box<crate::model::InitializrMetadata>),
     /// Initializr metadata loading failed
     MetadataFailed(String),
     /// Project generation completed
@@ -253,8 +254,7 @@ async fn run_tui() -> Result<()> {
                                 KeyCode::Char('a') => {
                                     // Add server (in apps view)
                                     if app.active_resource == "apps" {
-                                        app.server_dialog_state =
-                                            app::ServerDialogState::default();
+                                        app.server_dialog_state = app::ServerDialogState::default();
                                         app.mode = Mode::ServerDialog;
                                     }
                                 }
@@ -263,8 +263,7 @@ async fn run_tui() -> Result<()> {
                                 {
                                     // Delete app (in apps view)
                                     if app.active_resource == "apps" && !app.apps.is_empty() {
-                                        let selected_app =
-                                            &app.apps[app.selected_app_index];
+                                        let selected_app = &app.apps[app.selected_app_index];
                                         app.modal_title = "Confirm Delete".into();
                                         app.modal_msg = format!(
                                             "Delete '{}' ({})?",
@@ -281,14 +280,9 @@ async fn run_tui() -> Result<()> {
                                 }
                                 KeyCode::Char('e') => {
                                     // Edit logger level (only in loggers view)
-                                    if app.active_resource == "loggers"
-                                        && !app.loggers.is_empty()
-                                    {
-                                        let logger =
-                                            &app.loggers[app.selected_logger_index];
-                                        let current = logger
-                                            .effective_level
-                                            .clone();
+                                    if app.active_resource == "loggers" && !app.loggers.is_empty() {
+                                        let logger = &app.loggers[app.selected_logger_index];
+                                        let current = logger.effective_level.clone();
                                         let level_idx = app::LOG_LEVELS
                                             .iter()
                                             .position(|&l| l == current)
@@ -359,7 +353,8 @@ async fn run_tui() -> Result<()> {
                                         app.filter_text.clear();
                                         app.filter_active = false;
                                         if let Err(e) = app.fetch_mappings().await {
-                                            app.error_message = Some(format!("Failed to fetch mappings: {}", e));
+                                            app.error_message =
+                                                Some(format!("Failed to fetch mappings: {}", e));
                                         }
                                     } else {
                                         handle_describe(&mut app);
@@ -401,8 +396,7 @@ async fn run_tui() -> Result<()> {
                                             Some((KeyCode::Char('g'), Instant::now()));
                                     }
                                 } else {
-                                    app.last_key_press =
-                                        Some((KeyCode::Char('g'), Instant::now()));
+                                    app.last_key_press = Some((KeyCode::Char('g'), Instant::now()));
                                 }
                                 handled_g = true;
                             }
@@ -450,9 +444,9 @@ async fn run_tui() -> Result<()> {
                         }
                         KeyCode::Down => {
                             if !app.command_suggestions.is_empty() {
-                                app.command_suggestion_selected =
-                                    (app.command_suggestion_selected + 1)
-                                        % app.command_suggestions.len();
+                                app.command_suggestion_selected = (app.command_suggestion_selected
+                                    + 1)
+                                    % app.command_suggestions.len();
                             }
                         }
                         KeyCode::Up => {
@@ -559,12 +553,10 @@ async fn run_tui() -> Result<()> {
                                         app.server_dialog_state.url.pop();
                                     }
                                 },
-                                KeyCode::Char(c) => {
-                                    match app.server_dialog_state.active_field {
-                                        0 => app.server_dialog_state.name.push(c),
-                                        _ => app.server_dialog_state.url.push(c),
-                                    }
-                                }
+                                KeyCode::Char(c) => match app.server_dialog_state.active_field {
+                                    0 => app.server_dialog_state.name.push(c),
+                                    _ => app.server_dialog_state.url.push(c),
+                                },
                                 KeyCode::Enter => {
                                     handle_server_dialog_submit(&mut app, tx.clone());
                                 }
@@ -590,13 +582,9 @@ async fn run_tui() -> Result<()> {
                                 KeyCode::Char('j') | KeyCode::Down => {
                                     if !app.server_dialog_state.discovered_apps.is_empty() {
                                         app.server_dialog_state.scan_selected_index =
-                                            (app.server_dialog_state.scan_selected_index + 1)
-                                                .min(
-                                                    app.server_dialog_state
-                                                        .discovered_apps
-                                                        .len()
-                                                        - 1,
-                                                );
+                                            (app.server_dialog_state.scan_selected_index + 1).min(
+                                                app.server_dialog_state.discovered_apps.len() - 1,
+                                            );
                                     }
                                 }
                                 KeyCode::Char('k') | KeyCode::Up => {
@@ -626,22 +614,18 @@ async fn run_tui() -> Result<()> {
                                 (app.edit_logger_state.selected_level_index + 1).min(max);
                         }
                         KeyCode::Char('k') | KeyCode::Up => {
-                            app.edit_logger_state.selected_level_index = app
-                                .edit_logger_state
-                                .selected_level_index
-                                .saturating_sub(1);
+                            app.edit_logger_state.selected_level_index =
+                                app.edit_logger_state.selected_level_index.saturating_sub(1);
                         }
                         KeyCode::Enter => {
-                            let level =
-                                app::LOG_LEVELS[app.edit_logger_state.selected_level_index];
+                            let level = app::LOG_LEVELS[app.edit_logger_state.selected_level_index];
                             let logger_name = app.edit_logger_state.logger_name.clone();
                             match app.set_logger_level(&logger_name, level).await {
                                 Ok(()) => {
                                     app.mode = Mode::Normal;
                                 }
                                 Err(e) => {
-                                    app.edit_logger_state.error =
-                                        Some(format!("Failed: {}", e));
+                                    app.edit_logger_state.error = Some(format!("Failed: {}", e));
                                 }
                             }
                         }
@@ -696,6 +680,7 @@ async fn run_tui() -> Result<()> {
                     app.splash_state.current_step = app.splash_state.total_steps;
                     app.mode = Mode::Normal;
                 }
+                #[allow(dead_code)]
                 AppEvent::DataFetched { resource, result } => {
                     if let Err(err_msg) = result {
                         app.error_message =
@@ -713,36 +698,31 @@ async fn run_tui() -> Result<()> {
                 AppEvent::ScanDone => {
                     app.server_dialog_state.scan_done = true;
                     app.server_dialog_state.scan_progress = "Scan complete.".into();
-                    app.server_dialog_state.phase =
-                        app::ServerDialogPhase::ScanResults;
+                    app.server_dialog_state.phase = app::ServerDialogPhase::ScanResults;
                     app.server_dialog_state.scan_selected_index = 0;
                 }
                 AppEvent::MetadataLoaded(meta) => {
                     app.new_project_state.loading_metadata = false;
                     app.new_project_state.apply_metadata_defaults(&meta);
-                    app.new_project_state.metadata = Some(meta);
+                    app.new_project_state.metadata = Some(*meta);
                     app.new_project_state.error = None;
                 }
                 AppEvent::MetadataFailed(err) => {
                     app.new_project_state.loading_metadata = false;
-                    app.new_project_state.error =
-                        Some(format!("Failed to load metadata: {}", err));
+                    app.new_project_state.error = Some(format!("Failed to load metadata: {}", err));
                 }
-                AppEvent::GenerateResult(result) => {
-                    match result {
-                        Ok(path) => {
-                            app.new_project_state.gen_done = true;
-                            app.new_project_state.gen_progress =
-                                format!("Project created at: {}", path);
-                            app.new_project_state.gen_result_path = Some(path);
-                        }
-                        Err(err) => {
-                            app.new_project_state.step = app::WizardStep::Confirm;
-                            app.new_project_state.error =
-                                Some(format!("Generation failed: {}", err));
-                        }
+                AppEvent::GenerateResult(result) => match result {
+                    Ok(path) => {
+                        app.new_project_state.gen_done = true;
+                        app.new_project_state.gen_progress =
+                            format!("Project created at: {}", path);
+                        app.new_project_state.gen_result_path = Some(path);
                     }
-                }
+                    Err(err) => {
+                        app.new_project_state.step = app::WizardStep::Confirm;
+                        app.new_project_state.error = Some(format!("Generation failed: {}", err));
+                    }
+                },
             }
         }
 
@@ -804,10 +784,7 @@ fn format_thread_dump_json(body: &serde_json::Value) -> String {
                 .get("threadState")
                 .and_then(|s| s.as_str())
                 .unwrap_or("UNKNOWN");
-            let id = thread
-                .get("threadId")
-                .and_then(|i| i.as_i64())
-                .unwrap_or(0);
+            let id = thread.get("threadId").and_then(|i| i.as_i64()).unwrap_or(0);
 
             output.push_str(&format!("\n\"{}\" #{} {}\n", name, id, state));
 
@@ -870,10 +847,7 @@ fn handle_describe(app: &mut App) {
         }
         "loggers" => {
             if let Some(logger) = app.loggers.get(app.selected_logger_index) {
-                let configured = logger
-                    .configured_level
-                    .as_deref()
-                    .unwrap_or("(not set)");
+                let configured = logger.configured_level.as_deref().unwrap_or("(not set)");
                 app.describe_title = format!("Logger: {}", logger.name);
                 app.describe_content = format!(
                     "Name:              {}\nConfigured Level:  {}\nEffective Level:   {}",
@@ -964,7 +938,11 @@ fn handle_confirm_action(app: &mut App) {
 // Helper: switch to a resource from the command palette
 // ---------------------------------------------------------------------------
 
-async fn handle_resource_switch(app: &mut App, selected: &ResourceItem, _tx: mpsc::Sender<AppEvent>) {
+async fn handle_resource_switch(
+    app: &mut App,
+    selected: &ResourceItem,
+    _tx: mpsc::Sender<AppEvent>,
+) {
     // Handle :new command specially — it opens the new project wizard
     if selected.command == ":new" {
         app.mode = Mode::NewProject;
@@ -979,7 +957,9 @@ async fn handle_resource_switch(app: &mut App, selected: &ResourceItem, _tx: mps
         tokio::spawn(async move {
             match App::fetch_initializr_metadata(&http_client).await {
                 Ok(meta) => {
-                    let _ = tx_clone.send(AppEvent::MetadataLoaded(meta)).await;
+                    let _ = tx_clone
+                        .send(AppEvent::MetadataLoaded(Box::new(meta)))
+                        .await;
                 }
                 Err(e) => {
                     let _ = tx_clone
@@ -1145,10 +1125,7 @@ fn handle_server_dialog_submit(app: &mut App, tx: mpsc::Sender<AppEvent>) {
     tokio::spawn(async move {
         let status = check_health_static(&http_client, &url).await;
         let _ = tx_clone
-            .send(AppEvent::HealthResult {
-                app_index,
-                status,
-            })
+            .send(AppEvent::HealthResult { app_index, status })
             .await;
     });
 
@@ -1165,8 +1142,8 @@ fn handle_scan_result_select(app: &mut App, tx: mpsc::Sender<AppEvent>) {
         return;
     }
 
-    let discovered = &app.server_dialog_state.discovered_apps
-        [app.server_dialog_state.scan_selected_index];
+    let discovered =
+        &app.server_dialog_state.discovered_apps[app.server_dialog_state.scan_selected_index];
     let url = discovered.url.clone();
     let port = discovered.port;
     let name = format!("localhost:{}", port);
@@ -1194,12 +1171,7 @@ fn handle_scan_result_select(app: &mut App, tx: mpsc::Sender<AppEvent>) {
 
     tokio::spawn(async move {
         let status = check_health_static(&http_client, &url).await;
-        let _ = tx
-            .send(AppEvent::HealthResult {
-                app_index,
-                status,
-            })
-            .await;
+        let _ = tx.send(AppEvent::HealthResult { app_index, status }).await;
     });
 
     app.mode = Mode::Normal;
@@ -1209,11 +1181,7 @@ fn handle_scan_result_select(app: &mut App, tx: mpsc::Sender<AppEvent>) {
 // New Project wizard key handling
 // ---------------------------------------------------------------------------
 
-async fn handle_new_project_key(
-    app: &mut App,
-    key: KeyCode,
-    tx: mpsc::Sender<AppEvent>,
-) {
+async fn handle_new_project_key(app: &mut App, key: KeyCode, tx: mpsc::Sender<AppEvent>) {
     use app::WizardStep;
 
     match app.new_project_state.step {
@@ -1250,12 +1218,12 @@ async fn handle_new_project_key(
                         (app.new_project_state.active_field + 1) % 10;
                 }
                 KeyCode::BackTab | KeyCode::Up => {
-                    app.new_project_state.active_field =
-                        if app.new_project_state.active_field == 0 {
-                            9
-                        } else {
-                            app.new_project_state.active_field - 1
-                        };
+                    app.new_project_state.active_field = if app.new_project_state.active_field == 0
+                    {
+                        9
+                    } else {
+                        app.new_project_state.active_field - 1
+                    };
                 }
                 KeyCode::Left if is_select => {
                     // Cycle select field backward
@@ -1342,11 +1310,21 @@ async fn handle_new_project_key(
                 KeyCode::Backspace if !is_select => {
                     // Delete from text field
                     match field {
-                        5 => { app.new_project_state.group_id.pop(); }
-                        6 => { app.new_project_state.artifact_id.pop(); }
-                        7 => { app.new_project_state.name.pop(); }
-                        8 => { app.new_project_state.description.pop(); }
-                        9 => { app.new_project_state.package_name.pop(); }
+                        5 => {
+                            app.new_project_state.group_id.pop();
+                        }
+                        6 => {
+                            app.new_project_state.artifact_id.pop();
+                        }
+                        7 => {
+                            app.new_project_state.name.pop();
+                        }
+                        8 => {
+                            app.new_project_state.description.pop();
+                        }
+                        9 => {
+                            app.new_project_state.package_name.pop();
+                        }
                         _ => {}
                     }
                 }
@@ -1431,8 +1409,7 @@ async fn handle_new_project_key(
                         let group = &meta.dependency_groups;
                         if let Some(g) = group.get(app.new_project_state.dep_group_idx) {
                             let filtered = filtered_deps(g, &app.new_project_state.dep_filter);
-                            app.new_project_state.dep_item_idx =
-                                filtered.len().saturating_sub(1);
+                            app.new_project_state.dep_item_idx = filtered.len().saturating_sub(1);
                         }
                     }
                 }
@@ -1443,8 +1420,11 @@ async fn handle_new_project_key(
                         let filtered = filtered_deps(g, &app.new_project_state.dep_filter);
                         if let Some(dep) = filtered.get(app.new_project_state.dep_item_idx) {
                             let id = dep.id.clone();
-                            if let Some(pos) =
-                                app.new_project_state.selected_deps.iter().position(|d| d == &id)
+                            if let Some(pos) = app
+                                .new_project_state
+                                .selected_deps
+                                .iter()
+                                .position(|d| d == &id)
                             {
                                 app.new_project_state.selected_deps.remove(pos);
                             } else {
@@ -1591,8 +1571,7 @@ fn filtered_deps<'a>(
 
 /// Known ports commonly used by Spring Boot applications.
 const SCAN_PORTS: &[u16] = &[
-    8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090, 8443, 9090, 9091, 3000,
-    5000,
+    8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090, 8443, 9090, 9091, 3000, 5000,
 ];
 
 async fn scan_local_ports(tx: mpsc::Sender<AppEvent>, http_client: reqwest::Client) {
