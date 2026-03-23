@@ -1,5 +1,5 @@
 
-<img width="1260" height="701" alt="tsb-logo" src="https://github.com/user-attachments/assets/4a8054dc-baa0-45e4-ad86-782d43fa6b76" />
+<img width="630" height="350" alt="tsb-logo" src="https://github.com/user-attachments/assets/4a8054dc-baa0-45e4-ad86-782d43fa6b76" />
 
 # tsb - Terminal UI for Spring Boot
 
