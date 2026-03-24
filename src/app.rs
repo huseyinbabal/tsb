@@ -1674,8 +1674,8 @@ impl App {
     // Tick
     // -----------------------------------------------------------------------
 
-    /// Called on every tick of the main event loop. Advances the spinner
-    /// frame counter used for animated loading indicators.
+    /// Called on every tick of the main event loop.
+    /// Advances the spinner frame counter used for animated loading indicators.
     pub fn on_tick(&mut self) {
         self.spinner_frame = self.spinner_frame.wrapping_add(1);
     }
