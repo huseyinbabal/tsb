@@ -52,7 +52,11 @@ enum AppEvent {
     /// Splash progress message
     Progress(String),
     /// Health check result for a specific app
-    HealthResult { app_index: usize, status: AppStatus },
+    HealthResult {
+        app_index: usize,
+        status: AppStatus,
+        app_name: Option<String>,
+    },
     /// All initial health checks done — transition out of splash
     SplashDone,
     /// Actuator data fetched for a resource
@@ -212,10 +216,12 @@ async fn run_tui() -> Result<()> {
                     .await;
 
                 let status = check_health_static(&http_client, url).await;
+                let app_name = fetch_app_name_static(&http_client, url).await;
                 let _ = tx_clone
                     .send(AppEvent::HealthResult {
                         app_index: *idx,
                         status,
+                        app_name,
                     })
                     .await;
 
@@ -912,9 +918,20 @@ async fn run_tui() -> Result<()> {
                         .saturating_add(1)
                         .min(app.splash_state.total_steps);
                 }
-                AppEvent::HealthResult { app_index, status } => {
+                AppEvent::HealthResult {
+                    app_index,
+                    status,
+                    app_name,
+                } => {
                     if app_index < app.apps.len() {
                         app.apps[app_index].status = status;
+                        if let Some(name) = app_name {
+                            app.apps[app_index].name = name.clone();
+                            // Also update the config so the name persists
+                            let url = app.apps[app_index].url.clone();
+                            app.config.add_app(name, url);
+                            let _ = app.config.save();
+                        }
                     }
                 }
                 AppEvent::SplashDone => {
@@ -1005,6 +1022,25 @@ async fn check_health_static(client: &reqwest::Client, url: &str) -> AppStatus {
             }
         }
         Err(_) => AppStatus::Down,
+    }
+}
+
+/// Fetch `spring.application.name` from actuator. Returns `None` if unavailable.
+async fn fetch_app_name_static(client: &reqwest::Client, url: &str) -> Option<String> {
+    let endpoint = format!(
+        "{}/actuator/env/spring.application.name",
+        url.trim_end_matches('/')
+    );
+    let resp = client.get(&endpoint).send().await.ok()?;
+    let body: serde_json::Value = resp.json().await.ok()?;
+    let value = body
+        .get("property")
+        .and_then(|p| p.get("value"))
+        .and_then(|v| v.as_str())?;
+    if value.is_empty() || value.contains('*') {
+        None
+    } else {
+        Some(value.to_string())
     }
 }
 
@@ -1382,10 +1418,12 @@ async fn refresh_resource(app: &mut App, resource: &str, tx: mpsc::Sender<AppEve
             tokio::spawn(async move {
                 for (idx, url) in &apps_snapshot {
                     let status = check_health_static(&http_client, url).await;
+                    let app_name = fetch_app_name_static(&http_client, url).await;
                     let _ = tx_clone
                         .send(AppEvent::HealthResult {
                             app_index: *idx,
                             status,
+                            app_name,
                         })
                         .await;
                 }
@@ -1468,8 +1506,13 @@ fn handle_server_dialog_submit(app: &mut App, tx: mpsc::Sender<AppEvent>) {
 
     tokio::spawn(async move {
         let status = check_health_static(&http_client, &url).await;
+        let app_name = fetch_app_name_static(&http_client, &url).await;
         let _ = tx_clone
-            .send(AppEvent::HealthResult { app_index, status })
+            .send(AppEvent::HealthResult {
+                app_index,
+                status,
+                app_name,
+            })
             .await;
     });
 
@@ -1515,7 +1558,14 @@ fn handle_scan_result_select(app: &mut App, tx: mpsc::Sender<AppEvent>) {
 
     tokio::spawn(async move {
         let status = check_health_static(&http_client, &url).await;
-        let _ = tx.send(AppEvent::HealthResult { app_index, status }).await;
+        let app_name = fetch_app_name_static(&http_client, &url).await;
+        let _ = tx
+            .send(AppEvent::HealthResult {
+                app_index,
+                status,
+                app_name,
+            })
+            .await;
     });
 
     app.mode = Mode::Normal;
