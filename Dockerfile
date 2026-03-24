@@ -1,12 +1,6 @@
 # Stage 1: Build
 FROM rust:latest AS builder
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 # Copy manifests first for better caching
@@ -28,10 +22,9 @@ RUN touch src/main.rs && cargo build --release
 # Stage 2: Runtime
 FROM debian:trixie-slim
 
-# Install runtime dependencies for TLS
+# Install CA certificates for TLS
 RUN apt-get update && apt-get install -y \
     ca-certificates \
-    libssl3t64 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary from builder
