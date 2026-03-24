@@ -28,9 +28,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary from builder
-COPY --from=builder /app/target/release/tsb /usr/local/bin/tsb
+COPY --from=builder /app/target/release/tspring /usr/local/bin/tspring
 
 # Set terminal for TUI
 ENV TERM=xterm-256color
 
-ENTRYPOINT ["tsb"]
+ENTRYPOINT ["tspring"]
