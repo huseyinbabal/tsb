@@ -1,6 +1,6 @@
 [package]
 name = "tsb"
-version = "1.0.0-rc.2"
+version = "1.0.0"
 edition = "2021"
 description = "Terminal UI for Spring Boot - A modern TUI for managing Spring Boot applications"
 license = "MIT"
