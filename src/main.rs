@@ -113,14 +113,15 @@ async fn run_tui() -> Result<()> {
     let (tx, mut rx) = mpsc::channel::<AppEvent>(100);
 
     // Kick off the splash sequence
-    if app.apps.is_empty() {
-        // No apps configured — show server dialog immediately
-        app.mode = Mode::ServerDialog;
-    } else {
-        // Start splash with health checks
+    {
+        // Always show splash first
         app.mode = Mode::Splash;
         app.splash_state.current_step = 0;
-        app.splash_state.current_message = "Checking application health...".into();
+        app.splash_state.current_message = if app.apps.is_empty() {
+            "Starting up...".into()
+        } else {
+            "Checking application health...".into()
+        };
 
         let tx_clone = tx.clone();
         let apps_snapshot: Vec<(usize, String)> = app
@@ -211,6 +212,7 @@ async fn run_tui() -> Result<()> {
                             match key.code {
                                 KeyCode::Char('q') => app.should_quit = true,
                                 KeyCode::Esc => {
+                                    app.error_message = None;
                                     if !app.filter_text.is_empty() {
                                         // Clear filter first
                                         app.filter_text.clear();
@@ -298,50 +300,79 @@ async fn run_tui() -> Result<()> {
                                     }
                                 }
                                 KeyCode::Char('t') => {
-                                    // Thread dump (only in apps view)
                                     if app.active_resource == "apps" && !app.apps.is_empty() {
-                                        // Temporarily set active app to the hovered one
+                                        // Thread dump from apps view — use hovered app
                                         let url = app.apps[app.selected_app_index].url.clone();
                                         let prev_active = app.config.active_app_url.clone();
                                         app.config.active_app_url = Some(url);
                                         match app.fetch_and_save_thread_dump().await {
-                                            Ok(path) => {
-                                                app.describe_title = "Thread Dump".into();
-                                                app.describe_content = format!(
-                                                    "Thread dump saved successfully!\n\nSaved to:\n  {}\n\nUse :apps to see all saved dumps.",
-                                                    path
-                                                );
+                                            Ok(_path) => {
+                                                app.active_resource = "threaddump".to_string();
+                                                app.filter_text.clear();
+                                                app.filter_active = false;
+                                                app.scan_saved_dumps();
+                                                app.selected_thread_dump_index = 0;
+                                            }
+                                            Err(e) => {
+                                                app.describe_title = "Thread Dump — Error".into();
+                                                app.describe_content = format!("{}", e);
                                                 app.describe_scroll = 0;
                                                 app.mode = Mode::Describe;
                                             }
-                                            Err(e) => {
-                                                app.error_message = Some(format!("Failed: {}", e));
-                                            }
                                         }
                                         app.config.active_app_url = prev_active;
+                                    } else if app.active_resource == "threaddump" {
+                                        // Thread dump from threaddump view — use active app
+                                        match app.fetch_and_save_thread_dump().await {
+                                            Ok(_path) => {
+                                                app.scan_saved_dumps();
+                                                app.selected_thread_dump_index = 0;
+                                            }
+                                            Err(e) => {
+                                                app.describe_title = "Thread Dump — Error".into();
+                                                app.describe_content = format!("{}", e);
+                                                app.describe_scroll = 0;
+                                                app.mode = Mode::Describe;
+                                            }
+                                        }
                                     }
                                 }
                                 KeyCode::Char('h') => {
-                                    // Heap dump (only in apps view)
                                     if app.active_resource == "apps" && !app.apps.is_empty() {
+                                        // Heap dump from apps view — use hovered app
                                         let url = app.apps[app.selected_app_index].url.clone();
                                         let prev_active = app.config.active_app_url.clone();
                                         app.config.active_app_url = Some(url);
                                         match app.download_heap_dump().await {
-                                            Ok(path) => {
-                                                app.describe_title = "Heap Dump".into();
-                                                app.describe_content = format!(
-                                                    "Heap dump saved successfully!\n\nSaved to:\n  {}\n\nAnalyze with:\n  jhat {}\n  VisualVM\n  Eclipse MAT",
-                                                    path, path
-                                                );
+                                            Ok(_path) => {
+                                                app.active_resource = "heapdump".to_string();
+                                                app.filter_text.clear();
+                                                app.filter_active = false;
+                                                app.scan_saved_dumps();
+                                                app.selected_heap_dump_index = 0;
+                                            }
+                                            Err(e) => {
+                                                app.describe_title = "Heap Dump — Error".into();
+                                                app.describe_content = format!("{}", e);
                                                 app.describe_scroll = 0;
                                                 app.mode = Mode::Describe;
                                             }
-                                            Err(e) => {
-                                                app.error_message = Some(format!("Failed: {}", e));
-                                            }
                                         }
                                         app.config.active_app_url = prev_active;
+                                    } else if app.active_resource == "heapdump" {
+                                        // Heap dump from heapdump view — use active app
+                                        match app.download_heap_dump().await {
+                                            Ok(_path) => {
+                                                app.scan_saved_dumps();
+                                                app.selected_heap_dump_index = 0;
+                                            }
+                                            Err(e) => {
+                                                app.describe_title = "Heap Dump — Error".into();
+                                                app.describe_content = format!("{}", e);
+                                                app.describe_scroll = 0;
+                                                app.mode = Mode::Describe;
+                                            }
+                                        }
                                     }
                                 }
                                 KeyCode::Enter => {
@@ -363,6 +394,74 @@ async fn run_tui() -> Result<()> {
                                 }
                                 KeyCode::Char('d') => {
                                     handle_describe(&mut app);
+                                }
+                                KeyCode::Char('v') => {
+                                    if app.active_resource == "heapdump"
+                                        && !app.saved_heap_dumps.is_empty()
+                                    {
+                                        let dump =
+                                            &app.saved_heap_dumps[app.selected_heap_dump_index];
+                                        if let Err(e) = std::process::Command::new("open")
+                                            .arg("-a")
+                                            .arg("VisualVM")
+                                            .arg("--args")
+                                            .arg("--openfile")
+                                            .arg(&dump.path)
+                                            .stdout(std::process::Stdio::null())
+                                            .stderr(std::process::Stdio::null())
+                                            .spawn()
+                                        {
+                                            app.error_message =
+                                                Some(format!("Failed to start VisualVM: {}", e));
+                                        }
+                                    } else if app.active_resource == "threaddump"
+                                        && !app.saved_thread_dumps.is_empty()
+                                    {
+                                        let dump =
+                                            &app.saved_thread_dumps[app.selected_thread_dump_index];
+                                        // Use the .tdump file for VisualVM
+                                        let tdump_path = dump.path
+                                            .replace(".json", ".tdump")
+                                            .replace(".txt", ".tdump");
+                                        if std::path::Path::new(&tdump_path).exists() {
+                                            if let Err(e) = std::process::Command::new("open")
+                                                .arg("-a")
+                                                .arg("VisualVM")
+                                                .arg("--args")
+                                                .arg("--openfile")
+                                                .arg(&tdump_path)
+                                                .stdout(std::process::Stdio::null())
+                                                .stderr(std::process::Stdio::null())
+                                                .spawn()
+                                            {
+                                                app.error_message =
+                                                    Some(format!("Failed to start VisualVM: {}", e));
+                                            }
+                                        } else {
+                                            app.error_message = Some(
+                                                "No .tdump file found. Take a new thread dump to generate one.".into()
+                                            );
+                                        }
+                                    }
+                                }
+                                KeyCode::Char('m') => {
+                                    if app.active_resource == "heapdump"
+                                        && !app.saved_heap_dumps.is_empty()
+                                    {
+                                        let dump =
+                                            &app.saved_heap_dumps[app.selected_heap_dump_index];
+                                        if let Err(e) = std::process::Command::new("open")
+                                            .arg("-a")
+                                            .arg("MemoryAnalyzer")
+                                            .arg(&dump.path)
+                                            .stdout(std::process::Stdio::null())
+                                            .stderr(std::process::Stdio::null())
+                                            .spawn()
+                                        {
+                                            app.error_message =
+                                                Some(format!("Failed to start Eclipse MAT: {}", e));
+                                        }
+                                    }
                                 }
                                 _ => {}
                             }
@@ -679,7 +778,11 @@ async fn run_tui() -> Result<()> {
                 AppEvent::SplashDone => {
                     app.splash_state.done = true;
                     app.splash_state.current_step = app.splash_state.total_steps;
-                    app.mode = Mode::Normal;
+                    if app.apps.is_empty() {
+                        app.mode = Mode::ServerDialog;
+                    } else {
+                        app.mode = Mode::Normal;
+                    }
                 }
                 #[allow(dead_code)]
                 AppEvent::DataFetched { resource, result } => {
@@ -904,12 +1007,11 @@ fn handle_describe(app: &mut App) {
             if let Some(dump) = app.saved_heap_dumps.get(app.selected_heap_dump_index) {
                 app.describe_title = format!("Heap Dump: {}", dump.timestamp);
                 app.describe_content = format!(
-                    "Path:       {}\nSize:       {:.1} MB\nTimestamp:  {}\nApp:        {}\n\nAnalyze with:\n  jhat {}\n  VisualVM\n  Eclipse MAT",
+                    "Path:       {}\nSize:       {:.1} MB\nTimestamp:  {}\nApp:        {}\n\nAnalyze with:\n  VisualVM     [v]\n  Eclipse MAT  [m]",
                     dump.path,
                     dump.size_bytes as f64 / 1_048_576.0,
                     dump.timestamp,
                     if dump.app_name.is_empty() { "—" } else { &dump.app_name },
-                    dump.path,
                 );
                 app.describe_scroll = 0;
                 app.mode = Mode::Describe;
@@ -1361,96 +1463,96 @@ async fn handle_new_project_key(app: &mut App, key: KeyCode, tx: mpsc::Sender<Ap
                     KeyCode::Esc => {
                         app.new_project_state.dep_filter_active = false;
                         app.new_project_state.dep_filter.clear();
+                        app.new_project_state.dep_item_idx = 0;
                     }
                     KeyCode::Enter => {
                         app.new_project_state.dep_filter_active = false;
+                        app.new_project_state.dep_item_idx = 0;
                     }
                     KeyCode::Backspace => {
                         app.new_project_state.dep_filter.pop();
+                        app.new_project_state.dep_item_idx = 0;
                     }
                     KeyCode::Char(c) => {
                         app.new_project_state.dep_filter.push(c);
+                        app.new_project_state.dep_item_idx = 0;
                     }
                     _ => {}
                 }
                 return;
             }
 
+            let total =
+                crate::ui::new_project::flat_dep_count(&meta, &app.new_project_state.dep_filter);
+
             match key {
                 KeyCode::Esc => {
-                    // Go back to ProjectInfo
                     app.new_project_state.step = WizardStep::ProjectInfo;
                 }
                 KeyCode::Char('/') => {
                     app.new_project_state.dep_filter_active = true;
                     app.new_project_state.dep_filter.clear();
+                    app.new_project_state.dep_item_idx = 0;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
-                    // Navigate deps down
-                    let group = &meta.dependency_groups;
-                    if let Some(g) = group.get(app.new_project_state.dep_group_idx) {
-                        let filtered = filtered_deps(g, &app.new_project_state.dep_filter);
-                        if app.new_project_state.dep_item_idx + 1 < filtered.len() {
-                            app.new_project_state.dep_item_idx += 1;
-                        } else {
-                            // Move to next group
-                            if app.new_project_state.dep_group_idx + 1 < group.len() {
-                                app.new_project_state.dep_group_idx += 1;
-                                app.new_project_state.dep_item_idx = 0;
-                            }
+                    if total > 0 {
+                        let mut next = app.new_project_state.dep_item_idx + 1;
+                        // Skip group headers
+                        while next < total
+                            && !crate::ui::new_project::flat_dep_is_selectable(
+                                &meta,
+                                &app.new_project_state.dep_filter,
+                                next,
+                            )
+                        {
+                            next += 1;
+                        }
+                        if next < total {
+                            app.new_project_state.dep_item_idx = next;
                         }
                     }
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    // Navigate deps up
                     if app.new_project_state.dep_item_idx > 0 {
-                        app.new_project_state.dep_item_idx -= 1;
-                    } else if app.new_project_state.dep_group_idx > 0 {
-                        app.new_project_state.dep_group_idx -= 1;
-                        let group = &meta.dependency_groups;
-                        if let Some(g) = group.get(app.new_project_state.dep_group_idx) {
-                            let filtered = filtered_deps(g, &app.new_project_state.dep_filter);
-                            app.new_project_state.dep_item_idx = filtered.len().saturating_sub(1);
+                        let mut prev = app.new_project_state.dep_item_idx - 1;
+                        // Skip group headers
+                        while prev > 0
+                            && !crate::ui::new_project::flat_dep_is_selectable(
+                                &meta,
+                                &app.new_project_state.dep_filter,
+                                prev,
+                            )
+                        {
+                            prev -= 1;
+                        }
+                        if crate::ui::new_project::flat_dep_is_selectable(
+                            &meta,
+                            &app.new_project_state.dep_filter,
+                            prev,
+                        ) {
+                            app.new_project_state.dep_item_idx = prev;
                         }
                     }
                 }
                 KeyCode::Char(' ') => {
-                    // Toggle dependency selection
-                    let group = &meta.dependency_groups;
-                    if let Some(g) = group.get(app.new_project_state.dep_group_idx) {
-                        let filtered = filtered_deps(g, &app.new_project_state.dep_filter);
-                        if let Some(dep) = filtered.get(app.new_project_state.dep_item_idx) {
-                            let id = dep.id.clone();
-                            if let Some(pos) = app
-                                .new_project_state
-                                .selected_deps
-                                .iter()
-                                .position(|d| d == &id)
-                            {
-                                app.new_project_state.selected_deps.remove(pos);
-                            } else {
-                                app.new_project_state.selected_deps.push(id);
-                            }
+                    if let Some(id) = crate::ui::new_project::flat_dep_id_at(
+                        &meta,
+                        &app.new_project_state.dep_filter,
+                        app.new_project_state.dep_item_idx,
+                    ) {
+                        if let Some(pos) = app
+                            .new_project_state
+                            .selected_deps
+                            .iter()
+                            .position(|d| d == &id)
+                        {
+                            app.new_project_state.selected_deps.remove(pos);
+                        } else {
+                            app.new_project_state.selected_deps.push(id);
                         }
                     }
                 }
-                KeyCode::Tab => {
-                    // Move to next group
-                    let group = &meta.dependency_groups;
-                    if app.new_project_state.dep_group_idx + 1 < group.len() {
-                        app.new_project_state.dep_group_idx += 1;
-                        app.new_project_state.dep_item_idx = 0;
-                    }
-                }
-                KeyCode::BackTab => {
-                    // Move to previous group
-                    if app.new_project_state.dep_group_idx > 0 {
-                        app.new_project_state.dep_group_idx -= 1;
-                        app.new_project_state.dep_item_idx = 0;
-                    }
-                }
                 KeyCode::Enter => {
-                    // Move to Confirm step
                     app.new_project_state.step = WizardStep::Confirm;
                 }
                 _ => {}
@@ -1543,26 +1645,6 @@ async fn handle_new_project_key(app: &mut App, key: KeyCode, tx: mpsc::Sender<Ap
             }
         }
     }
-}
-
-/// Filter dependencies within a group by the filter string.
-fn filtered_deps<'a>(
-    group: &'a crate::model::InitializrDependencyGroup,
-    filter: &str,
-) -> Vec<&'a crate::model::InitializrDependency> {
-    if filter.is_empty() {
-        return group.values.iter().collect();
-    }
-    let f = filter.to_lowercase();
-    group
-        .values
-        .iter()
-        .filter(|d| {
-            d.name.to_lowercase().contains(&f)
-                || d.id.to_lowercase().contains(&f)
-                || d.description.to_lowercase().contains(&f)
-        })
-        .collect()
 }
 
 // ---------------------------------------------------------------------------

@@ -137,7 +137,7 @@ impl Default for NewProjectWizardState {
             description: "Demo project for Spring Boot".into(),
             package_name: "com.example.demo".into(),
             dep_group_idx: 0,
-            dep_item_idx: 0,
+            dep_item_idx: 1, // skip first group header
             selected_deps: Vec::new(),
             dep_filter: String::new(),
             dep_filter_active: false,
@@ -669,16 +669,42 @@ impl App {
         Ok(dir)
     }
 
+    /// Returns `~/.config/tsb/dumps/<app_name>/`, creating it if needed.
+    /// Sanitizes the app name for use as a directory name.
+    pub fn app_dumps_dir(app_name: &str) -> Result<PathBuf> {
+        let sanitized: String = app_name
+            .chars()
+            .map(|c| {
+                if c.is_alphanumeric() || c == '-' || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
+            .collect();
+        let name = if sanitized.is_empty() {
+            "unknown".to_string()
+        } else {
+            sanitized
+        };
+        let dir = Self::dumps_dir()?.join(name);
+        std::fs::create_dir_all(&dir)
+            .with_context(|| format!("failed to create app dumps dir {}", dir.display()))?;
+        Ok(dir)
+    }
+
     /// Scan the dumps directory and populate `saved_thread_dumps` and
     /// `saved_heap_dumps` from existing files on disk.
+    /// Only loads dumps for the currently active app.
     pub fn scan_saved_dumps(&mut self) {
-        let dir = match Self::dumps_dir() {
+        self.saved_thread_dumps.clear();
+        self.saved_heap_dumps.clear();
+
+        let app_name = self.current_server_name();
+        let dir = match Self::app_dumps_dir(&app_name) {
             Ok(d) => d,
             Err(_) => return,
         };
-
-        self.saved_thread_dumps.clear();
-        self.saved_heap_dumps.clear();
 
         let entries = match std::fs::read_dir(&dir) {
             Ok(e) => e,
@@ -687,6 +713,9 @@ impl App {
 
         for entry in entries.flatten() {
             let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
             let filename = match path.file_name().and_then(|f| f.to_str()) {
                 Some(f) => f.to_string(),
                 None => continue,
@@ -694,8 +723,6 @@ impl App {
             let size_bytes = entry.metadata().map(|m| m.len()).unwrap_or(0);
             let path_str = path.to_string_lossy().to_string();
 
-            // Extract timestamp from filename: threaddump_YYYYMMDD_HHMMSS.txt
-            // or heapdump_YYYYMMDD_HHMMSS.hprof
             if filename.starts_with("threaddump_")
                 && (filename.ends_with(".json") || filename.ends_with(".txt"))
             {
@@ -705,8 +732,8 @@ impl App {
                     .unwrap_or("")
                     .to_string();
                 self.saved_thread_dumps.push(crate::model::SavedDump {
-                    app_url: String::new(),
-                    app_name: String::new(),
+                    app_url: self.active_app_url().unwrap_or_default(),
+                    app_name: app_name.clone(),
                     path: path_str,
                     timestamp,
                     size_bytes,
@@ -718,8 +745,8 @@ impl App {
                     .unwrap_or("")
                     .to_string();
                 self.saved_heap_dumps.push(crate::model::SavedDump {
-                    app_url: String::new(),
-                    app_name: String::new(),
+                    app_url: self.active_app_url().unwrap_or_default(),
+                    app_name: app_name.clone(),
                     path: path_str,
                     timestamp,
                     size_bytes,
@@ -1095,21 +1122,46 @@ impl App {
             .get(&endpoint)
             .send()
             .await
-            .context("failed to fetch thread dump")?;
+            .context("failed to connect to the application")?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            if status.as_u16() == 404 {
+                anyhow::bail!(
+                    "Thread dump endpoint not found.\n\n\
+                     The /actuator/threaddump endpoint is not available.\n\
+                     Make sure your application has:\n\
+                     1. spring-boot-starter-actuator dependency\n\
+                     2. management.endpoints.web.exposure.include=threaddump\n   \
+                        (or include=* to expose all endpoints)"
+                );
+            }
+            anyhow::bail!(
+                "Thread dump request failed with status {}.\n\
+                 The endpoint may not be enabled or accessible.",
+                status
+            );
+        }
 
         let body: Value = resp
             .json()
             .await
             .context("failed to parse thread dump response")?;
 
-        // Save raw JSON to file
+        // Save raw JSON to per-app directory
         let raw_json = serde_json::to_string_pretty(&body).unwrap_or_else(|_| body.to_string());
         let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
         let filename = format!("threaddump_{}.json", timestamp);
-        let dir = Self::dumps_dir()?;
+        let dir = Self::app_dumps_dir(&app_name)?;
         let path = dir.join(&filename);
         std::fs::write(&path, &raw_json)
             .with_context(|| format!("failed to write thread dump to {}", path.display()))?;
+
+        // Also write a .tdump in standard JVM text format for VisualVM
+        let tdump_filename = format!("threaddump_{}.tdump", timestamp);
+        let tdump_path = dir.join(&tdump_filename);
+        let tdump_text = Self::thread_dump_to_jvm_text(&body);
+        let _ = std::fs::write(&tdump_path, &tdump_text);
 
         let size_bytes = raw_json.len() as u64;
         let path_str = path.to_string_lossy().to_string();
@@ -1123,6 +1175,78 @@ impl App {
         });
 
         Ok(path_str)
+    }
+
+    /// Convert Spring Boot actuator thread dump JSON into standard JVM text
+    /// format that VisualVM can open as a `.tdump` file.
+    fn thread_dump_to_jvm_text(body: &Value) -> String {
+        let mut out = String::new();
+        let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+        out.push_str(&format!("{}\nFull thread dump:\n\n", now));
+
+        if let Some(threads) = body.get("threads").and_then(|t| t.as_array()) {
+            for thread in threads {
+                let name = thread
+                    .get("threadName")
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("unknown");
+                let state = thread
+                    .get("threadState")
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("UNKNOWN");
+                let id = thread.get("threadId").and_then(|i| i.as_i64()).unwrap_or(0);
+                let daemon = thread
+                    .get("daemon")
+                    .and_then(|d| d.as_bool())
+                    .unwrap_or(false);
+                let daemon_str = if daemon { " daemon" } else { "" };
+
+                out.push_str(&format!(
+                    "\"{}\" #{}{} java.lang.Thread.State: {}\n",
+                    name, id, daemon_str, state
+                ));
+
+                if let Some(stack) = thread.get("stackTrace").and_then(|s| s.as_array()) {
+                    for frame in stack {
+                        let class = frame
+                            .get("className")
+                            .and_then(|c| c.as_str())
+                            .unwrap_or("Unknown");
+                        let method = frame
+                            .get("methodName")
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("unknown");
+                        let file = frame
+                            .get("fileName")
+                            .and_then(|f| f.as_str());
+                        let line = frame
+                            .get("lineNumber")
+                            .and_then(|l| l.as_i64())
+                            .unwrap_or(-1);
+                        let native = frame
+                            .get("nativeMethod")
+                            .and_then(|n| n.as_bool())
+                            .unwrap_or(false);
+
+                        let location = if native {
+                            "Native Method".to_string()
+                        } else if let Some(f) = file {
+                            if line >= 0 {
+                                format!("{}:{}", f, line)
+                            } else {
+                                f.to_string()
+                            }
+                        } else {
+                            "Unknown Source".to_string()
+                        };
+
+                        out.push_str(&format!("\tat {}.{}({})\n", class, method, location));
+                    }
+                }
+                out.push('\n');
+            }
+        }
+        out
     }
 
     // -----------------------------------------------------------------------
@@ -1141,10 +1265,25 @@ impl App {
             .get(&endpoint)
             .send()
             .await
-            .context("failed to request heap dump")?;
+            .context("failed to connect to the application")?;
 
         if !resp.status().is_success() {
-            anyhow::bail!("heap dump request failed with status {}", resp.status());
+            let status = resp.status();
+            if status.as_u16() == 404 {
+                anyhow::bail!(
+                    "Heap dump endpoint not found.\n\n\
+                     The /actuator/heapdump endpoint is not available.\n\
+                     Make sure your application has:\n\
+                     1. spring-boot-starter-actuator dependency\n\
+                     2. management.endpoints.web.exposure.include=heapdump\n   \
+                        (or include=* to expose all endpoints)"
+                );
+            }
+            anyhow::bail!(
+                "Heap dump request failed with status {}.\n\
+                 The endpoint may not be enabled or accessible.",
+                status
+            );
         }
 
         let bytes = resp
@@ -1152,10 +1291,10 @@ impl App {
             .await
             .context("failed to read heap dump response body")?;
 
-        // Write to dumps directory
+        // Write to per-app dumps directory
         let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
         let filename = format!("heapdump_{}.hprof", timestamp);
-        let dir = Self::dumps_dir()?;
+        let dir = Self::app_dumps_dir(&app_name)?;
         let path = dir.join(&filename);
         let size_bytes = bytes.len() as u64;
         std::fs::write(&path, &bytes)

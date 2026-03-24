@@ -318,13 +318,11 @@ fn render_dependencies(f: &mut Frame, state: &NewProjectWizardState) {
         None => return,
     };
 
-    // Layout: filter bar | group tabs | dep list | selected summary | hints
+    // Layout: filter bar | dep list | selected summary | hints
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(1), // filter bar
-            Constraint::Length(1), // group tabs
-            Constraint::Length(1), // spacer
             Constraint::Min(3),    // dep list
             Constraint::Length(2), // selected summary
             Constraint::Length(1), // hints
@@ -358,55 +356,19 @@ fn render_dependencies(f: &mut Frame, state: &NewProjectWizardState) {
         f.render_widget(filter_hint, chunks[0]);
     }
 
-    // -- Group tabs --
-    let mut tab_spans: Vec<Span> = vec![Span::styled("  ", Style::default())];
-    let max_groups_shown = 6;
-    let start_group = if state.dep_group_idx >= max_groups_shown {
-        state.dep_group_idx - max_groups_shown + 1
-    } else {
-        0
-    };
-    let end_group = (start_group + max_groups_shown).min(meta.dependency_groups.len());
+    // -- Flat dependency list with group headers --
+    let flat = flatten_all_deps_for_render(meta, &state.dep_filter);
 
-    if start_group > 0 {
-        tab_spans.push(Span::styled("◂ ", Style::default().fg(Color::DarkGray)));
-    }
-
-    for i in start_group..end_group {
-        let name = &meta.dependency_groups[i].name;
-        let short_name: String = if name.len() > 12 {
-            format!("{}…", &name[..11])
-        } else {
-            name.clone()
-        };
-        if i == state.dep_group_idx {
-            tab_spans.push(Span::styled(
-                format!("[{}]", short_name),
+    let items: Vec<ListItem> = flat
+        .iter()
+        .map(|entry| match entry {
+            FlatDepEntry::GroupHeader(name) => ListItem::new(Line::from(Span::styled(
+                format!("  ── {} ──", name),
                 Style::default()
                     .fg(SPRING_GREEN)
                     .add_modifier(Modifier::BOLD),
-            ));
-        } else {
-            tab_spans.push(Span::styled(
-                format!(" {} ", short_name),
-                Style::default().fg(Color::DarkGray),
-            ));
-        }
-    }
-
-    if end_group < meta.dependency_groups.len() {
-        tab_spans.push(Span::styled(" ▸", Style::default().fg(Color::DarkGray)));
-    }
-
-    f.render_widget(Paragraph::new(Line::from(tab_spans)), chunks[1]);
-
-    // -- Dependency list for current group --
-    if let Some(group) = meta.dependency_groups.get(state.dep_group_idx) {
-        let filtered = filtered_deps_for_render(group, &state.dep_filter);
-
-        let items: Vec<ListItem> = filtered
-            .iter()
-            .map(|dep| {
+            ))),
+            FlatDepEntry::Dep(dep) => {
                 let is_selected = state.selected_deps.contains(&dep.id);
                 let checkbox = if is_selected { "[x]" } else { "[ ]" };
                 let check_style = if is_selected {
@@ -428,29 +390,27 @@ fn render_dependencies(f: &mut Frame, state: &NewProjectWizardState) {
                     ));
                 }
                 ListItem::new(Line::from(spans))
-            })
-            .collect();
+            }
+        })
+        .collect();
 
-        if items.is_empty() {
-            let empty_msg = Paragraph::new(Line::from(Span::styled(
-                "  No dependencies match the filter",
-                Style::default().fg(Color::DarkGray),
-            )));
-            f.render_widget(empty_msg, chunks[3]);
-        } else {
-            let list = List::new(items).highlight_style(
-                Style::default()
-                    .bg(Color::DarkGray)
-                    .fg(Color::White)
-                    .add_modifier(Modifier::BOLD),
-            );
+    if items.is_empty() {
+        let empty_msg = Paragraph::new(Line::from(Span::styled(
+            "  No dependencies match the filter",
+            Style::default().fg(Color::DarkGray),
+        )));
+        f.render_widget(empty_msg, chunks[1]);
+    } else {
+        let list = List::new(items).highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        );
 
-            let mut list_state = ListState::default();
-            list_state.select(Some(
-                state.dep_item_idx.min(filtered.len().saturating_sub(1)),
-            ));
-            f.render_stateful_widget(list, chunks[3], &mut list_state);
-        }
+        let mut list_state = ListState::default();
+        list_state.select(Some(state.dep_item_idx.min(flat.len().saturating_sub(1))));
+        f.render_stateful_widget(list, chunks[1], &mut list_state);
     }
 
     // -- Selected summary --
@@ -459,7 +419,7 @@ fn render_dependencies(f: &mut Frame, state: &NewProjectWizardState) {
             "  No dependencies selected",
             Style::default().fg(Color::DarkGray),
         )));
-        f.render_widget(summary, chunks[4]);
+        f.render_widget(summary, chunks[2]);
     } else {
         let dep_names: Vec<String> = state.selected_deps.iter().take(8).cloned().collect();
         let mut summary_text = dep_names.join(", ");
@@ -475,7 +435,7 @@ fn render_dependencies(f: &mut Frame, state: &NewProjectWizardState) {
             ),
             Span::styled(summary_text, Style::default().fg(Color::White)),
         ])]);
-        f.render_widget(summary, chunks[4]);
+        f.render_widget(summary, chunks[2]);
     }
 
     // -- Hints --
@@ -484,8 +444,6 @@ fn render_dependencies(f: &mut Frame, state: &NewProjectWizardState) {
         Span::styled(" nav  ", Style::default().fg(Color::DarkGray)),
         Span::styled("Space", Style::default().fg(Color::DarkGray)),
         Span::styled(" toggle  ", Style::default().fg(Color::DarkGray)),
-        Span::styled("Tab/Shift-Tab", Style::default().fg(Color::DarkGray)),
-        Span::styled(" groups  ", Style::default().fg(Color::DarkGray)),
         Span::styled("/", Style::default().fg(Color::DarkGray)),
         Span::styled(" filter  ", Style::default().fg(Color::DarkGray)),
         Span::styled("Enter", Style::default().fg(Color::DarkGray)),
@@ -493,7 +451,7 @@ fn render_dependencies(f: &mut Frame, state: &NewProjectWizardState) {
         Span::styled("Esc", Style::default().fg(Color::DarkGray)),
         Span::styled(" back", Style::default().fg(Color::DarkGray)),
     ]));
-    f.render_widget(hints, chunks[5]);
+    f.render_widget(hints, chunks[3]);
 }
 
 // ---------------------------------------------------------------------------
@@ -737,21 +695,68 @@ fn truncate_str(s: &str, max: usize) -> String {
     }
 }
 
-fn filtered_deps_for_render<'a>(
-    group: &'a crate::model::InitializrDependencyGroup,
+enum FlatDepEntry<'a> {
+    GroupHeader(String),
+    Dep(&'a crate::model::InitializrDependency),
+}
+
+fn flatten_all_deps_for_render<'a>(
+    meta: &'a crate::model::InitializrMetadata,
     filter: &str,
-) -> Vec<&'a crate::model::InitializrDependency> {
-    if filter.is_empty() {
-        return group.values.iter().collect();
-    }
+) -> Vec<FlatDepEntry<'a>> {
     let f = filter.to_lowercase();
-    group
-        .values
-        .iter()
-        .filter(|d| {
-            d.name.to_lowercase().contains(&f)
-                || d.id.to_lowercase().contains(&f)
-                || d.description.to_lowercase().contains(&f)
-        })
-        .collect()
+    let mut result = Vec::new();
+
+    for group in &meta.dependency_groups {
+        let deps: Vec<&crate::model::InitializrDependency> = if filter.is_empty() {
+            group.values.iter().collect()
+        } else {
+            group
+                .values
+                .iter()
+                .filter(|d| {
+                    d.name.to_lowercase().contains(&f)
+                        || d.id.to_lowercase().contains(&f)
+                        || d.description.to_lowercase().contains(&f)
+                })
+                .collect()
+        };
+
+        if !deps.is_empty() {
+            result.push(FlatDepEntry::GroupHeader(group.name.clone()));
+            for dep in deps {
+                result.push(FlatDepEntry::Dep(dep));
+            }
+        }
+    }
+
+    result
+}
+
+/// Check if a flat dep entry at the given index is a selectable dependency (not a header).
+pub fn flat_dep_is_selectable(
+    meta: &crate::model::InitializrMetadata,
+    filter: &str,
+    idx: usize,
+) -> bool {
+    let flat = flatten_all_deps_for_render(meta, filter);
+    matches!(flat.get(idx), Some(FlatDepEntry::Dep(_)))
+}
+
+/// Get the dependency ID at the given flat index, if it's a Dep entry.
+pub fn flat_dep_id_at(
+    meta: &crate::model::InitializrMetadata,
+    filter: &str,
+    idx: usize,
+) -> Option<String> {
+    let flat = flatten_all_deps_for_render(meta, filter);
+    match flat.get(idx) {
+        Some(FlatDepEntry::Dep(dep)) => Some(dep.id.clone()),
+        _ => None,
+    }
+}
+
+/// Total number of entries in the flat list.
+pub fn flat_dep_count(meta: &crate::model::InitializrMetadata, filter: &str) -> usize {
+    flatten_all_deps_for_render(meta, filter).len()
 }

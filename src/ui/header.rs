@@ -90,12 +90,6 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 Span::styled(" Connect", Style::default().fg(Color::DarkGray)),
             ]),
             Line::from(vec![
-                Span::styled(" t", Style::default().fg(Color::Yellow)),
-                Span::styled(" ThreadDump  ", Style::default().fg(Color::DarkGray)),
-                Span::styled("h", Style::default().fg(Color::Yellow)),
-                Span::styled(" HeapDump", Style::default().fg(Color::DarkGray)),
-            ]),
-            Line::from(vec![
                 Span::styled(" a", Style::default().fg(Color::Yellow)),
                 Span::styled(" Add Server  ", Style::default().fg(Color::DarkGray)),
                 Span::styled("^d", Style::default().fg(Color::Yellow)),
@@ -110,6 +104,38 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             Line::from(vec![
                 Span::styled(" Enter", Style::default().fg(Color::Yellow)),
                 Span::styled(" Describe", Style::default().fg(Color::DarkGray)),
+            ]),
+        ],
+        "threaddump" => vec![
+            Line::from(vec![
+                Span::styled(" t", Style::default().fg(Color::Yellow)),
+                Span::styled(" ThreadDump", Style::default().fg(Color::DarkGray)),
+            ]),
+            Line::from(vec![
+                Span::styled(" Enter", Style::default().fg(Color::Yellow)),
+                Span::styled(" Describe", Style::default().fg(Color::DarkGray)),
+            ]),
+            Line::from(vec![
+                Span::styled(" /", Style::default().fg(Color::Yellow)),
+                Span::styled(" Filter", Style::default().fg(Color::DarkGray)),
+            ]),
+        ],
+        "heapdump" => vec![
+            Line::from(vec![
+                Span::styled(" h", Style::default().fg(Color::Yellow)),
+                Span::styled(" HeapDump  ", Style::default().fg(Color::DarkGray)),
+                Span::styled("v", Style::default().fg(Color::Yellow)),
+                Span::styled(" VisualVM", Style::default().fg(Color::DarkGray)),
+            ]),
+            Line::from(vec![
+                Span::styled(" m", Style::default().fg(Color::Yellow)),
+                Span::styled(" Eclipse MAT", Style::default().fg(Color::DarkGray)),
+            ]),
+            Line::from(vec![
+                Span::styled(" Enter", Style::default().fg(Color::Yellow)),
+                Span::styled(" Describe  ", Style::default().fg(Color::DarkGray)),
+                Span::styled("/", Style::default().fg(Color::Yellow)),
+                Span::styled(" Filter", Style::default().fg(Color::DarkGray)),
             ]),
         ],
         _ => vec![
@@ -147,26 +173,34 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     // -- Column 5: Logo --
     let logo = vec![
         Line::from(Span::styled(
-            "▀█▀ ▄▀▀ █▀▄",
+            r" _____ ___ ___ ",
             Style::default()
                 .fg(SPRING_GREEN)
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(Span::styled(
-            " █  ▀▄▄ █▀▄",
+            r"|_   _/ __| _ )",
             Style::default()
                 .fg(SPRING_GREEN)
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(Span::styled(
-            "  Spring Boot TUI",
-            Style::default().fg(Color::DarkGray),
+            r"  | | \__ \ _ \",
+            Style::default()
+                .fg(SPRING_GREEN)
+                .add_modifier(Modifier::BOLD),
         )),
         Line::from(Span::styled(
-            format!("        v{}", version),
+            r"  |_| |___/___/",
+            Style::default()
+                .fg(SPRING_GREEN)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            format!("         v{}", version),
             Style::default().fg(Color::DarkGray),
         )),
     ];
-    let logo_widget = Paragraph::new(logo).alignment(Alignment::Left);
+    let logo_widget = Paragraph::new(logo).alignment(Alignment::Right);
     f.render_widget(logo_widget, columns[4]);
 }

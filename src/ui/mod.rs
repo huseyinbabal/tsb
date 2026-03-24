@@ -180,7 +180,7 @@ fn render_footer(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
             "heapdump" => app.saved_heap_dumps.len(),
             _ => 0,
         };
-        vec![
+        let mut spans = vec![
             Span::styled(
                 format!(" {} ", resource_label),
                 Style::default()
@@ -193,10 +193,27 @@ fn render_footer(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
                 Style::default().fg(Color::DarkGray),
             ),
             Span::styled(
-                "  Press ':' for command palette  ",
+                "  Press ':' for commands  ",
                 Style::default().fg(Color::DarkGray),
             ),
-        ]
+        ];
+
+        if resource_label == "heapdump" {
+            spans.push(Span::styled(
+                " [v] VisualVM  [m] Eclipse MAT  [d] Describe ",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        } else if resource_label == "threaddump" {
+            spans.push(Span::styled(
+                " [v] VisualVM  [d] Describe ",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        }
+        spans
     };
 
     let footer_line = Line::from(footer_spans);

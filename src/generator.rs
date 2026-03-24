@@ -172,6 +172,13 @@ pub fn generate_project(params: &NewProjectParams) -> Result<String> {
         }
     }
 
+    // Always add spring-boot-starter-test as a test dependency
+    test_deps.push(DepCtx {
+        group_id: "org.springframework.boot".to_string(),
+        artifact_id: "spring-boot-starter-test".to_string(),
+        version: String::new(),
+    });
+
     let boms: Vec<BomCtx> = needed_boms
         .values()
         .map(|b| BomCtx {
@@ -365,6 +372,9 @@ fn to_pascal_case(s: &str) -> String {
 }
 
 fn normalize_boot_version(raw: &str) -> String {
+    if let Some(base) = raw.strip_suffix(".RELEASE") {
+        return base.to_string();
+    }
     if raw.ends_with("-SNAPSHOT") {
         return raw.to_string();
     }
