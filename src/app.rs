@@ -140,7 +140,7 @@ impl Default for NewProjectWizardState {
             package_name: "com.example.demo".into(),
             dep_group_idx: 0,
             dep_item_idx: 1, // skip first group header
-            selected_deps: Vec::new(),
+            selected_deps: vec!["actuator".to_string()],
             dep_filter: String::new(),
             dep_filter_active: false,
             output_dir: ".".into(),
