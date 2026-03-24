@@ -104,7 +104,8 @@ async fn main() -> Result<()> {
 /// Launch VisualVM with `--openfile <path>` to open a dump file.
 fn launch_visualvm_file(path: &str) -> Result<(), String> {
     let mut cmd = if cfg!(target_os = "macos") {
-        let mut c = std::process::Command::new("/Applications/VisualVM.app/Contents/MacOS/visualvm");
+        let mut c =
+            std::process::Command::new("/Applications/VisualVM.app/Contents/MacOS/visualvm");
         c.arg("--openfile").arg(path);
         c
     } else {
@@ -122,7 +123,8 @@ fn launch_visualvm_file(path: &str) -> Result<(), String> {
 /// Launch VisualVM with `--openpid <pid>` to attach to a live process.
 fn launch_visualvm_pid(pid: &str) -> Result<(), String> {
     let mut cmd = if cfg!(target_os = "macos") {
-        let mut c = std::process::Command::new("/Applications/VisualVM.app/Contents/MacOS/visualvm");
+        let mut c =
+            std::process::Command::new("/Applications/VisualVM.app/Contents/MacOS/visualvm");
         c.arg("--openpid").arg(pid);
         c
     } else {
@@ -451,7 +453,10 @@ async fn run_tui() -> Result<()> {
                                             app.filter_text.clear();
                                             app.filter_active = false;
                                             if let Err(e) = app.fetch_dashboard().await {
-                                                app.show_error(format!("Failed to fetch dashboard: {}", e));
+                                                app.show_error(format!(
+                                                    "Failed to fetch dashboard: {}",
+                                                    e
+                                                ));
                                             }
                                         }
                                     } else {
@@ -475,7 +480,8 @@ async fn run_tui() -> Result<()> {
                                     {
                                         let dump =
                                             &app.saved_thread_dumps[app.selected_thread_dump_index];
-                                        let tdump_path = dump.path
+                                        let tdump_path = dump
+                                            .path
                                             .replace(".json", ".tdump")
                                             .replace(".txt", ".tdump");
                                         if std::path::Path::new(&tdump_path).exists() {
@@ -586,21 +592,17 @@ async fn run_tui() -> Result<()> {
                                 }
                             }
                             KeyCode::Char('k') | KeyCode::Up => {
-                                app.thread_viz_scroll =
-                                    app.thread_viz_scroll.saturating_sub(1);
+                                app.thread_viz_scroll = app.thread_viz_scroll.saturating_sub(1);
                             }
                             KeyCode::Char('G') | KeyCode::End => {
-                                app.thread_viz_scroll =
-                                    app.parsed_threads.len().saturating_sub(1);
+                                app.thread_viz_scroll = app.parsed_threads.len().saturating_sub(1);
                             }
                             KeyCode::Home => {
                                 app.thread_viz_scroll = 0;
                             }
                             KeyCode::Enter | KeyCode::Char('d') => {
                                 // Show stack trace of selected thread in describe
-                                if let Some(t) =
-                                    app.parsed_threads.get(app.thread_viz_scroll)
-                                {
+                                if let Some(t) = app.parsed_threads.get(app.thread_viz_scroll) {
                                     app.describe_title =
                                         format!("\"{}\" #{} {}", t.name, t.id, t.state);
                                     let mut content = format!(
@@ -631,9 +633,7 @@ async fn run_tui() -> Result<()> {
                                             };
                                             content.push_str(&format!(
                                                 "  at {}.{}({})\n",
-                                                frame.class_name,
-                                                frame.method_name,
-                                                location
+                                                frame.class_name, frame.method_name, location
                                             ));
                                         }
                                     }
@@ -666,10 +666,7 @@ async fn run_tui() -> Result<()> {
                     // -------------------------------------------------------
                     Mode::ErrorModal => match key.code {
                         KeyCode::Enter | KeyCode::Esc => {
-                            app.mode = app
-                                .error_prev_mode
-                                .take()
-                                .unwrap_or(Mode::Normal);
+                            app.mode = app.error_prev_mode.take().unwrap_or(Mode::Normal);
                         }
                         _ => {}
                     },
@@ -1058,10 +1055,7 @@ fn parse_thread_dump_json(body: &serde_json::Value) -> Vec<crate::model::ThreadI
                                 .and_then(|f| f.as_str())
                                 .unwrap_or("")
                                 .to_string(),
-                            line_number: f
-                                .get("lineNumber")
-                                .and_then(|l| l.as_i64())
-                                .unwrap_or(-1),
+                            line_number: f.get("lineNumber").and_then(|l| l.as_i64()).unwrap_or(-1),
                             native_method: f
                                 .get("nativeMethod")
                                 .and_then(|n| n.as_bool())

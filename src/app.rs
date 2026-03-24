@@ -898,7 +898,11 @@ impl App {
 
     /// Helper: fetch a single metric value from `/actuator/metrics/{name}`.
     async fn fetch_metric(&self, base_url: &str, name: &str) -> Option<f64> {
-        let url = format!("{}/actuator/metrics/{}", base_url.trim_end_matches('/'), name);
+        let url = format!(
+            "{}/actuator/metrics/{}",
+            base_url.trim_end_matches('/'),
+            name
+        );
         let resp = self.http_client.get(&url).send().await.ok()?;
         let body: Value = resp.json().await.ok()?;
         body.get("measurements")
@@ -916,7 +920,10 @@ impl App {
         // -- Health -----------------------------------------------------------
         if let Ok(resp) = self
             .http_client
-            .get(format!("{}/actuator/health", base_url.trim_end_matches('/')))
+            .get(format!(
+                "{}/actuator/health",
+                base_url.trim_end_matches('/')
+            ))
             .send()
             .await
         {
@@ -969,10 +976,7 @@ impl App {
             // This is total, we'll also try heap specifically
             data.nonheap_used_mb = v / 1_048_576.0;
         }
-        if let Some(v) = self
-            .fetch_metric(&base_url, "jvm.memory.used")
-            .await
-        {
+        if let Some(v) = self.fetch_metric(&base_url, "jvm.memory.used").await {
             // Try to get heap-specific values via tags
             let heap_url = format!(
                 "{}/actuator/metrics/jvm.memory.used?tag=area:heap",
@@ -993,7 +997,11 @@ impl App {
                 }
             }
         }
-        if self.fetch_metric(&base_url, "jvm.memory.max").await.is_some() {
+        if self
+            .fetch_metric(&base_url, "jvm.memory.max")
+            .await
+            .is_some()
+        {
             // Try heap-specific max
             let heap_url = format!(
                 "{}/actuator/metrics/jvm.memory.max?tag=area:heap",
@@ -1042,8 +1050,7 @@ impl App {
             );
             if let Ok(resp) = self.http_client.get(&gc_url).send().await {
                 if let Ok(body) = resp.json::<Value>().await {
-                    if let Some(measurements) =
-                        body.get("measurements").and_then(|m| m.as_array())
+                    if let Some(measurements) = body.get("measurements").and_then(|m| m.as_array())
                     {
                         for m in measurements {
                             let stat = m.get("statistic").and_then(|s| s.as_str()).unwrap_or("");
@@ -1105,10 +1112,7 @@ impl App {
         }
 
         // -- Info -------------------------------------------------------------
-        let info_url = format!(
-            "{}/actuator/info",
-            base_url.trim_end_matches('/')
-        );
+        let info_url = format!("{}/actuator/info", base_url.trim_end_matches('/'));
         if let Ok(resp) = self.http_client.get(&info_url).send().await {
             if let Ok(body) = resp.json::<Value>().await {
                 if let Some(java) = body
@@ -1118,20 +1122,14 @@ impl App {
                 {
                     data.java_version = java.to_string();
                 }
-                if let Some(sb) = body
-                    .pointer("/build/version")
-                    .and_then(|v| v.as_str())
-                {
+                if let Some(sb) = body.pointer("/build/version").and_then(|v| v.as_str()) {
                     data.spring_boot_version = sb.to_string();
                 }
             }
         }
 
         // -- Env: active profiles ---------------------------------------------
-        let env_url = format!(
-            "{}/actuator/env",
-            base_url.trim_end_matches('/')
-        );
+        let env_url = format!("{}/actuator/env", base_url.trim_end_matches('/'));
         if let Ok(resp) = self.http_client.get(&env_url).send().await {
             if let Ok(body) = resp.json::<Value>().await {
                 if let Some(profiles) = body.get("activeProfiles").and_then(|p| p.as_array()) {
@@ -1164,7 +1162,10 @@ impl App {
         if let Ok(resp) = self.http_client.get(&url).send().await {
             if let Ok(body) = resp.json::<Value>().await {
                 if let Some(val) = body.get("property").and_then(|p| p.get("value")) {
-                    let pid = val.as_str().map(String::from).unwrap_or_else(|| val.to_string());
+                    let pid = val
+                        .as_str()
+                        .map(String::from)
+                        .unwrap_or_else(|| val.to_string());
                     if !pid.is_empty() && pid != "null" && !pid.contains('*') {
                         return Ok(pid);
                     }
@@ -1541,9 +1542,7 @@ impl App {
                             .get("methodName")
                             .and_then(|m| m.as_str())
                             .unwrap_or("unknown");
-                        let file = frame
-                            .get("fileName")
-                            .and_then(|f| f.as_str());
+                        let file = frame.get("fileName").and_then(|f| f.as_str());
                         let line = frame
                             .get("lineNumber")
                             .and_then(|l| l.as_i64())
@@ -1899,23 +1898,48 @@ mod tests {
                 },
             ],
             endpoints: vec![
-                Endpoint { name: "health".into(), url: "/actuator/health".into() },
-                Endpoint { name: "info".into(), url: "/actuator/info".into() },
+                Endpoint {
+                    name: "health".into(),
+                    url: "/actuator/health".into(),
+                },
+                Endpoint {
+                    name: "info".into(),
+                    url: "/actuator/info".into(),
+                },
             ],
             beans: vec![
-                Bean { name: "myBean".into(), scope: "singleton".into(), type_name: "com.example.MyBean".into() },
-                Bean { name: "dataSource".into(), scope: "singleton".into(), type_name: "javax.sql.DataSource".into() },
+                Bean {
+                    name: "myBean".into(),
+                    scope: "singleton".into(),
+                    type_name: "com.example.MyBean".into(),
+                },
+                Bean {
+                    name: "dataSource".into(),
+                    scope: "singleton".into(),
+                    type_name: "javax.sql.DataSource".into(),
+                },
             ],
             loggers: vec![
-                Logger { name: "com.example".into(), configured_level: Some("DEBUG".into()), effective_level: "DEBUG".into() },
-                Logger { name: "org.springframework".into(), configured_level: None, effective_level: "INFO".into() },
+                Logger {
+                    name: "com.example".into(),
+                    configured_level: Some("DEBUG".into()),
+                    effective_level: "DEBUG".into(),
+                },
+                Logger {
+                    name: "org.springframework".into(),
+                    configured_level: None,
+                    effective_level: "INFO".into(),
+                },
             ],
-            mappings: vec![
-                Mapping { pattern: "/api/users".into(), handler: "UserController#list".into() },
-            ],
-            env_props: vec![
-                EnvProperty { name: "server.port".into(), value: "8080".into(), source: "application.properties".into() },
-            ],
+            mappings: vec![Mapping {
+                pattern: "/api/users".into(),
+                handler: "UserController#list".into(),
+            }],
+            env_props: vec![EnvProperty {
+                name: "server.port".into(),
+                value: "8080".into(),
+                source: "application.properties".into(),
+            }],
             server_info: None,
             dashboard: DashboardData::default(),
             selected_app_index: 0,
@@ -2138,19 +2162,13 @@ mod tests {
     fn active_app_url_from_config() {
         let mut app = test_app();
         app.config.active_app_url = Some("http://override:1234".into());
-        assert_eq!(
-            app.active_app_url(),
-            Some("http://override:1234".into())
-        );
+        assert_eq!(app.active_app_url(), Some("http://override:1234".into()));
     }
 
     #[test]
     fn active_app_url_fallback_to_selected() {
         let app = test_app();
-        assert_eq!(
-            app.active_app_url(),
-            Some("http://localhost:8080".into())
-        );
+        assert_eq!(app.active_app_url(), Some("http://localhost:8080".into()));
     }
 
     #[test]
@@ -2438,23 +2456,47 @@ mod tests {
         let mut ws = NewProjectWizardState::default();
         let meta = InitializrMetadata {
             boot_versions: vec![
-                InitializrOption { id: "3.3.0".into(), name: "3.3.0".into() },
-                InitializrOption { id: "3.4.0".into(), name: "3.4.0".into() },
+                InitializrOption {
+                    id: "3.3.0".into(),
+                    name: "3.3.0".into(),
+                },
+                InitializrOption {
+                    id: "3.4.0".into(),
+                    name: "3.4.0".into(),
+                },
             ],
             boot_version_default: "3.4.0".into(),
             languages: vec![
-                InitializrOption { id: "java".into(), name: "Java".into() },
-                InitializrOption { id: "kotlin".into(), name: "Kotlin".into() },
+                InitializrOption {
+                    id: "java".into(),
+                    name: "Java".into(),
+                },
+                InitializrOption {
+                    id: "kotlin".into(),
+                    name: "Kotlin".into(),
+                },
             ],
             language_default: "kotlin".into(),
-            packagings: vec![InitializrOption { id: "jar".into(), name: "Jar".into() }],
+            packagings: vec![InitializrOption {
+                id: "jar".into(),
+                name: "Jar".into(),
+            }],
             packaging_default: "jar".into(),
             java_versions: vec![
-                InitializrOption { id: "17".into(), name: "17".into() },
-                InitializrOption { id: "21".into(), name: "21".into() },
+                InitializrOption {
+                    id: "17".into(),
+                    name: "17".into(),
+                },
+                InitializrOption {
+                    id: "21".into(),
+                    name: "21".into(),
+                },
             ],
             java_version_default: "21".into(),
-            project_types: vec![InitializrOption { id: "maven-project".into(), name: "Maven".into() }],
+            project_types: vec![InitializrOption {
+                id: "maven-project".into(),
+                name: "Maven".into(),
+            }],
             project_type_default: "maven-project".into(),
             dependency_groups: vec![],
             group_id_default: "org.test".into(),
@@ -2513,9 +2555,10 @@ mod tests {
     fn apply_metadata_default_not_found_falls_back_to_zero() {
         let mut ws = NewProjectWizardState::default();
         let meta = InitializrMetadata {
-            boot_versions: vec![
-                InitializrOption { id: "3.3.0".into(), name: "3.3.0".into() },
-            ],
+            boot_versions: vec![InitializrOption {
+                id: "3.3.0".into(),
+                name: "3.3.0".into(),
+            }],
             boot_version_default: "nonexistent".into(),
             languages: vec![],
             language_default: "".into(),
@@ -2566,8 +2609,7 @@ mod tests {
         Mock::given(method("GET"))
             .and(path("/actuator/health"))
             .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_json(serde_json::json!({"status": "UP"})),
+                ResponseTemplate::new(200).set_body_json(serde_json::json!({"status": "UP"})),
             )
             .mount(&server)
             .await;
@@ -2583,8 +2625,7 @@ mod tests {
         Mock::given(method("GET"))
             .and(path("/actuator/health"))
             .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_json(serde_json::json!({"status": "DOWN"})),
+                ResponseTemplate::new(200).set_body_json(serde_json::json!({"status": "DOWN"})),
             )
             .mount(&server)
             .await;
@@ -2655,8 +2696,7 @@ mod tests {
         Mock::given(method("GET"))
             .and(path("/actuator"))
             .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_json(serde_json::json!({"_links": {}})),
+                ResponseTemplate::new(200).set_body_json(serde_json::json!({"_links": {}})),
             )
             .mount(&server)
             .await;
@@ -2996,16 +3036,21 @@ mod tests {
 
         Mock::given(method("GET"))
             .and(path("/actuator/health"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"status":"UP"})))
-            .mount(&server).await;
+            .respond_with(
+                ResponseTemplate::new(200).set_body_json(serde_json::json!({"status":"UP"})),
+            )
+            .mount(&server)
+            .await;
         Mock::given(method("GET"))
             .and(path("/actuator/info"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
         Mock::given(method("GET"))
             .and(path("/actuator/env"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
 
         Mock::given(method("GET"))
             .and(path("/actuator/metrics/jvm.gc.pause"))
@@ -3034,29 +3079,36 @@ mod tests {
 
         Mock::given(method("GET"))
             .and(path("/actuator/health"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"status":"UP"})))
-            .mount(&server).await;
+            .respond_with(
+                ResponseTemplate::new(200).set_body_json(serde_json::json!({"status":"UP"})),
+            )
+            .mount(&server)
+            .await;
         Mock::given(method("GET"))
             .and(path("/actuator/info"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
         Mock::given(method("GET"))
             .and(path("/actuator/env"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
 
         Mock::given(method("GET"))
             .and(path("/actuator/metrics/disk.free"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                 "measurements": [{"statistic": "VALUE", "value": 53687091200.0}]
             })))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
         Mock::given(method("GET"))
             .and(path("/actuator/metrics/disk.total"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                 "measurements": [{"statistic": "VALUE", "value": 107374182400.0}]
             })))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
 
         let mut app = test_app_with_url(&server.uri());
         app.fetch_dashboard().await.unwrap();
@@ -3083,24 +3135,37 @@ mod tests {
                     "db": {"status": "DOWN"}
                 }
             })))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
         Mock::given(method("GET"))
             .and(path("/actuator/info"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
         Mock::given(method("GET"))
             .and(path("/actuator/env"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
 
         let mut app = test_app_with_url(&server.uri());
         app.fetch_dashboard().await.unwrap();
 
         assert_eq!(app.dashboard.health_components.len(), 2);
-        let disk = app.dashboard.health_components.iter().find(|c| c.name == "diskSpace").unwrap();
+        let disk = app
+            .dashboard
+            .health_components
+            .iter()
+            .find(|c| c.name == "diskSpace")
+            .unwrap();
         assert_eq!(disk.status, "UP");
         assert!(disk.details.contains("free"));
-        let db = app.dashboard.health_components.iter().find(|c| c.name == "db").unwrap();
+        let db = app
+            .dashboard
+            .health_components
+            .iter()
+            .find(|c| c.name == "db")
+            .unwrap();
         assert_eq!(db.status, "DOWN");
     }
 
@@ -3293,15 +3358,13 @@ mod tests {
     fn filtered_indices_threaddump() {
         let mut app = test_app();
         app.active_resource = "threaddump".into();
-        app.saved_thread_dumps = vec![
-            crate::model::SavedDump {
-                app_url: "http://localhost:8080".into(),
-                app_name: "my-app".into(),
-                path: "/tmp/threaddump_20240101.json".into(),
-                timestamp: "20240101_120000".into(),
-                size_bytes: 1024,
-            },
-        ];
+        app.saved_thread_dumps = vec![crate::model::SavedDump {
+            app_url: "http://localhost:8080".into(),
+            app_name: "my-app".into(),
+            path: "/tmp/threaddump_20240101.json".into(),
+            timestamp: "20240101_120000".into(),
+            size_bytes: 1024,
+        }];
         app.filter_text = "my-app".into();
         let indices = app.filtered_indices();
         assert_eq!(indices, vec![0]);
@@ -3315,15 +3378,13 @@ mod tests {
     fn filtered_indices_heapdump() {
         let mut app = test_app();
         app.active_resource = "heapdump".into();
-        app.saved_heap_dumps = vec![
-            crate::model::SavedDump {
-                app_url: "http://localhost:8080".into(),
-                app_name: "my-app".into(),
-                path: "/tmp/heapdump_20240101.hprof".into(),
-                timestamp: "20240101_120000".into(),
-                size_bytes: 1048576,
-            },
-        ];
+        app.saved_heap_dumps = vec![crate::model::SavedDump {
+            app_url: "http://localhost:8080".into(),
+            app_name: "my-app".into(),
+            path: "/tmp/heapdump_20240101.hprof".into(),
+            timestamp: "20240101_120000".into(),
+            size_bytes: 1048576,
+        }];
         app.filter_text = "hprof".into();
         let indices = app.filtered_indices();
         assert_eq!(indices, vec![0]);
@@ -3478,10 +3539,7 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(method("GET"))
             .and(path("/actuator/heapdump"))
-            .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_bytes(vec![0xCA, 0xFE, 0xBA, 0xBE]),
-            )
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(vec![0xCA, 0xFE, 0xBA, 0xBE]))
             .mount(&server)
             .await;
 
@@ -3567,16 +3625,21 @@ mod tests {
 
         Mock::given(method("GET"))
             .and(path("/actuator/health"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"status":"UP"})))
-            .mount(&server).await;
+            .respond_with(
+                ResponseTemplate::new(200).set_body_json(serde_json::json!({"status":"UP"})),
+            )
+            .mount(&server)
+            .await;
         Mock::given(method("GET"))
             .and(path("/actuator/info"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
         Mock::given(method("GET"))
             .and(path("/actuator/env"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
 
         Mock::given(method("GET"))
             .and(path("/actuator/metrics/http.server.requests"))
@@ -3586,7 +3649,8 @@ mod tests {
                     {"statistic": "TOTAL_TIME", "value": 120.0}
                 ]
             })))
-            .mount(&server).await;
+            .mount(&server)
+            .await;
 
         let mut app = test_app_with_url(&server.uri());
         app.fetch_dashboard().await.unwrap();
