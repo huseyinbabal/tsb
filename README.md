@@ -100,7 +100,7 @@ sudo mv tsb /usr/local/bin/
 ### Using Cargo
 
 ```bash
-cargo install tsb
+cargo install tspring
 ```
 
 ### Using Docker
