@@ -17,7 +17,6 @@ jobs:
       description: "Terminal UI for Spring Boot - A modern TUI for managing Spring Boot applications"
       homepage: "https://github.com/huseyinbabal/tsb"
       docker_image: tsb
-      check_coverage: true
     secrets:
       CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
