@@ -85,6 +85,83 @@ pub struct SavedDump {
 }
 
 // ===========================================================================
+// Thread visualization
+// ===========================================================================
+
+/// A single thread parsed from a thread dump JSON.
+#[derive(Debug, Clone)]
+pub struct ThreadInfo {
+    pub name: String,
+    pub id: i64,
+    pub state: String,
+    pub daemon: bool,
+    pub stack_trace: Vec<StackFrame>,
+}
+
+/// A single stack frame.
+#[derive(Debug, Clone)]
+pub struct StackFrame {
+    pub class_name: String,
+    pub method_name: String,
+    pub file_name: String,
+    pub line_number: i64,
+    pub native_method: bool,
+}
+
+// ===========================================================================
+// Dashboard data
+// ===========================================================================
+
+/// Health component status (e.g. db, diskSpace, redis).
+#[derive(Debug, Clone, Default)]
+pub struct HealthComponent {
+    pub name: String,
+    pub status: String,
+    pub details: String,
+}
+
+/// Dashboard metrics collected from multiple actuator endpoints.
+#[derive(Debug, Clone, Default)]
+pub struct DashboardData {
+    // -- health --
+    pub app_status: String,
+    pub health_components: Vec<HealthComponent>,
+
+    // -- JVM memory --
+    pub heap_used_mb: f64,
+    pub heap_max_mb: f64,
+    pub nonheap_used_mb: f64,
+
+    // -- threads --
+    pub threads_live: u64,
+    pub threads_peak: u64,
+    pub threads_daemon: u64,
+
+    // -- CPU --
+    pub cpu_system: f64,
+    pub cpu_process: f64,
+
+    // -- GC --
+    pub gc_pause_count: u64,
+    pub gc_pause_total_ms: f64,
+
+    // -- HTTP requests --
+    pub http_total_count: u64,
+    pub http_total_time_s: f64,
+    pub http_error_count: u64,
+
+    // -- info --
+    pub uptime_seconds: f64,
+    pub java_version: String,
+    pub spring_boot_version: String,
+    pub active_profiles: Vec<String>,
+
+    // -- disk --
+    pub disk_free_gb: f64,
+    pub disk_total_gb: f64,
+}
+
+// ===========================================================================
 // Spring Initializr metadata models
 // ===========================================================================
 
@@ -158,4 +235,142 @@ pub struct NewProjectParams {
     pub package_name: String,
     pub dependencies: Vec<String>,
     pub output_dir: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- AppStatus --
+
+    #[test]
+    fn app_status_display() {
+        assert_eq!(AppStatus::Up.to_string(), "UP");
+        assert_eq!(AppStatus::Down.to_string(), "DOWN");
+        assert_eq!(AppStatus::Unknown.to_string(), "UNKNOWN");
+    }
+
+    #[test]
+    fn app_status_default_is_unknown() {
+        assert_eq!(AppStatus::default(), AppStatus::Unknown);
+    }
+
+    #[test]
+    fn app_status_serde_roundtrip() {
+        for status in [AppStatus::Up, AppStatus::Down, AppStatus::Unknown] {
+            let json = serde_json::to_string(&status).unwrap();
+            let parsed: AppStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, status);
+        }
+    }
+
+    // -- SpringApp serde --
+
+    #[test]
+    fn spring_app_serde_roundtrip() {
+        let app = SpringApp {
+            name: "my-app".into(),
+            url: "http://localhost:8080".into(),
+            status: AppStatus::Up,
+        };
+        let json = serde_json::to_string(&app).unwrap();
+        let parsed: SpringApp = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, "my-app");
+        assert_eq!(parsed.url, "http://localhost:8080");
+        assert_eq!(parsed.status, AppStatus::Up);
+    }
+
+    // -- Bean serde (has rename) --
+
+    #[test]
+    fn bean_serde_rename_type() {
+        let bean = Bean {
+            name: "myBean".into(),
+            scope: "singleton".into(),
+            type_name: "com.example.MyBean".into(),
+        };
+        let json = serde_json::to_string(&bean).unwrap();
+        assert!(json.contains(r#""type":"com.example.MyBean"#));
+
+        let parsed: Bean = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.type_name, "com.example.MyBean");
+    }
+
+    // -- Logger --
+
+    #[test]
+    fn logger_serde_with_optional_configured_level() {
+        let logger = Logger {
+            name: "com.example".into(),
+            configured_level: None,
+            effective_level: "INFO".into(),
+        };
+        let json = serde_json::to_string(&logger).unwrap();
+        let parsed: Logger = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.configured_level, None);
+        assert_eq!(parsed.effective_level, "INFO");
+
+        let logger2 = Logger {
+            configured_level: Some("DEBUG".into()),
+            ..logger
+        };
+        let json2 = serde_json::to_string(&logger2).unwrap();
+        let parsed2: Logger = serde_json::from_str(&json2).unwrap();
+        assert_eq!(parsed2.configured_level, Some("DEBUG".into()));
+    }
+
+    // -- DashboardData default --
+
+    #[test]
+    fn dashboard_data_default_all_zero() {
+        let d = DashboardData::default();
+        assert_eq!(d.app_status, "");
+        assert!(d.health_components.is_empty());
+        assert_eq!(d.heap_used_mb, 0.0);
+        assert_eq!(d.threads_live, 0);
+        assert_eq!(d.cpu_system, 0.0);
+        assert_eq!(d.http_total_count, 0);
+        assert_eq!(d.uptime_seconds, 0.0);
+        assert!(d.active_profiles.is_empty());
+    }
+
+    // -- EnvProperty --
+
+    #[test]
+    fn env_property_serde() {
+        let prop = EnvProperty {
+            name: "server.port".into(),
+            value: "8080".into(),
+            source: "application.properties".into(),
+        };
+        let json = serde_json::to_string(&prop).unwrap();
+        let parsed: EnvProperty = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, "server.port");
+        assert_eq!(parsed.value, "8080");
+        assert_eq!(parsed.source, "application.properties");
+    }
+
+    // -- Mapping --
+
+    #[test]
+    fn mapping_serde() {
+        let m = Mapping {
+            pattern: "/api/users".into(),
+            handler: "com.example.UserController#list".into(),
+        };
+        let json = serde_json::to_string(&m).unwrap();
+        let parsed: Mapping = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.pattern, "/api/users");
+        assert_eq!(parsed.handler, "com.example.UserController#list");
+    }
+
+    // -- InitializrMetadata --
+
+    #[test]
+    fn initializr_dependency_default_description() {
+        let json = r#"{"id": "web", "name": "Spring Web"}"#;
+        let dep: InitializrDependency = serde_json::from_str(json).unwrap();
+        assert_eq!(dep.id, "web");
+        assert_eq!(dep.description, ""); // default
+    }
 }

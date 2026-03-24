@@ -92,7 +92,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             Line::from(vec![
                 Span::styled(" a", Style::default().fg(Color::Yellow)),
                 Span::styled(" Add Server  ", Style::default().fg(Color::DarkGray)),
-                Span::styled("^d", Style::default().fg(Color::Yellow)),
+                Span::styled("Ctrl+D", Style::default().fg(Color::Yellow)),
                 Span::styled(" Delete", Style::default().fg(Color::DarkGray)),
             ]),
         ],
@@ -106,6 +106,12 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 Span::styled(" Describe", Style::default().fg(Color::DarkGray)),
             ]),
         ],
+        "dashboard" => vec![Line::from(vec![
+            Span::styled(" R", Style::default().fg(Color::Yellow)),
+            Span::styled(" Refresh  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("V", Style::default().fg(Color::Yellow)),
+            Span::styled(" VisualVM", Style::default().fg(Color::DarkGray)),
+        ])],
         "threaddump" => vec![
             Line::from(vec![
                 Span::styled(" t", Style::default().fg(Color::Yellow)),
@@ -159,12 +165,8 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             Span::styled(" Command", Style::default().fg(Color::DarkGray)),
         ]),
         Line::from(vec![
-            Span::styled(" q", Style::default().fg(Color::Yellow)),
+            Span::styled(" Ctrl+C", Style::default().fg(Color::Yellow)),
             Span::styled(" Quit", Style::default().fg(Color::DarkGray)),
-        ]),
-        Line::from(vec![
-            Span::styled(" ctrl-c", Style::default().fg(Color::Yellow)),
-            Span::styled(" Force Quit", Style::default().fg(Color::DarkGray)),
         ]),
     ];
     let keybindings2_widget = Paragraph::new(keybindings_global);

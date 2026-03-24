@@ -1,5 +1,6 @@
 pub mod apps_table;
 pub mod beans_table;
+pub mod dashboard;
 pub mod describe;
 pub mod dialog;
 pub mod dumps_table;
@@ -13,6 +14,7 @@ pub mod new_project;
 pub mod resources;
 pub mod server_dialog;
 pub mod splash;
+pub mod thread_viz;
 
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -93,6 +95,9 @@ pub fn render(f: &mut Frame, app: &App) {
         Mode::Confirm => {
             dialog::render(f, app);
         }
+        Mode::ErrorModal => {
+            dialog::render(f, app);
+        }
         Mode::Resources => {
             resources::render(f, app);
         }
@@ -129,8 +134,12 @@ fn render_main(f: &mut Frame, app: &App) {
         Mode::Describe => {
             describe::render(f, app, content_area);
         }
+        Mode::ThreadViz => {
+            thread_viz::render(f, app, content_area);
+        }
         _ => match app.active_resource.as_str() {
             "apps" => apps_table::render(f, app, content_area),
+            "dashboard" => dashboard::render(f, app, content_area),
             "endpoints" => endpoints_table::render(f, app, content_area),
             "beans" => beans_table::render(f, app, content_area),
             "loggers" => loggers_table::render(f, app, content_area),
@@ -162,11 +171,6 @@ fn render_footer(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
                 Style::default().fg(Color::White), // cursor
             ),
         ]
-    } else if let Some(ref err) = app.error_message {
-        vec![Span::styled(
-            format!(" Error: {}", err),
-            Style::default().fg(Color::Red),
-        )]
     } else {
         let resource_label = app.active_resource.as_str();
         let count = match resource_label {
@@ -180,23 +184,32 @@ fn render_footer(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
             "heapdump" => app.saved_heap_dumps.len(),
             _ => 0,
         };
-        let mut spans = vec![
-            Span::styled(
-                format!(" {} ", resource_label),
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(SPRING_GREEN)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
+        let mut spans = vec![Span::styled(
+            format!(" {} ", resource_label),
+            Style::default()
+                .fg(Color::Black)
+                .bg(SPRING_GREEN)
+                .add_modifier(Modifier::BOLD),
+        )];
+        if resource_label == "dashboard" {
+            spans.push(Span::styled(
+                format!(" {} ", app.current_server_name()),
+                Style::default().fg(Color::DarkGray),
+            ));
+            spans.push(Span::styled(
+                " [R] Refresh  [:]  Commands  ",
+                Style::default().fg(Color::DarkGray),
+            ));
+        } else {
+            spans.push(Span::styled(
                 format!(" {} items", count),
                 Style::default().fg(Color::DarkGray),
-            ),
-            Span::styled(
+            ));
+            spans.push(Span::styled(
                 "  Press ':' for commands  ",
                 Style::default().fg(Color::DarkGray),
-            ),
-        ];
+            ));
+        }
 
         if resource_label == "heapdump" {
             spans.push(Span::styled(

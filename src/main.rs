@@ -97,6 +97,68 @@ async fn main() -> Result<()> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Platform-aware external tool launchers
+// ---------------------------------------------------------------------------
+
+/// Launch VisualVM with `--openfile <path>` to open a dump file.
+fn launch_visualvm_file(path: &str) -> Result<(), String> {
+    let mut cmd = if cfg!(target_os = "macos") {
+        let mut c = std::process::Command::new("/Applications/VisualVM.app/Contents/MacOS/visualvm");
+        c.arg("--openfile").arg(path);
+        c
+    } else {
+        let mut c = std::process::Command::new("visualvm");
+        c.arg("--openfile").arg(path);
+        c
+    };
+    cmd.stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Failed to start VisualVM: {}", e))?;
+    Ok(())
+}
+
+/// Launch VisualVM with `--openpid <pid>` to attach to a live process.
+fn launch_visualvm_pid(pid: &str) -> Result<(), String> {
+    let mut cmd = if cfg!(target_os = "macos") {
+        let mut c = std::process::Command::new("/Applications/VisualVM.app/Contents/MacOS/visualvm");
+        c.arg("--openpid").arg(pid);
+        c
+    } else {
+        let mut c = std::process::Command::new("visualvm");
+        c.arg("--openpid").arg(pid);
+        c
+    };
+    cmd.stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Failed to start VisualVM: {}", e))?;
+    Ok(())
+}
+
+/// Launch Eclipse Memory Analyzer with a heap dump file.
+fn launch_eclipse_mat(path: &str) -> Result<(), String> {
+    let mut cmd = if cfg!(target_os = "macos") {
+        let mut c = std::process::Command::new("open");
+        c.arg("-a").arg("MemoryAnalyzer").arg(path);
+        c
+    } else if cfg!(target_os = "windows") {
+        let mut c = std::process::Command::new("MemoryAnalyzer.exe");
+        c.arg(path);
+        c
+    } else {
+        let mut c = std::process::Command::new("MemoryAnalyzer");
+        c.arg(path);
+        c
+    };
+    cmd.stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Failed to start Eclipse MAT: {}", e))?;
+    Ok(())
+}
+
 /// Run the full-screen TUI (default `tsb` command).
 async fn run_tui() -> Result<()> {
     // Setup terminal
@@ -210,9 +272,7 @@ async fn run_tui() -> Result<()> {
                         } else {
                             let mut handled_g = false;
                             match key.code {
-                                KeyCode::Char('q') => app.should_quit = true,
                                 KeyCode::Esc => {
-                                    app.error_message = None;
                                     if !app.filter_text.is_empty() {
                                         // Clear filter first
                                         app.filter_text.clear();
@@ -377,16 +437,22 @@ async fn run_tui() -> Result<()> {
                                 }
                                 KeyCode::Enter => {
                                     if app.active_resource == "apps" && !app.apps.is_empty() {
-                                        // Connect to the selected app and show mappings
-                                        let url = app.apps[app.selected_app_index].url.clone();
-                                        app.config.active_app_url = Some(url);
-                                        app.active_resource = "mappings".to_string();
-                                        app.selected_mapping_index = 0;
-                                        app.filter_text.clear();
-                                        app.filter_active = false;
-                                        if let Err(e) = app.fetch_mappings().await {
-                                            app.error_message =
-                                                Some(format!("Failed to fetch mappings: {}", e));
+                                        let selected = &app.apps[app.selected_app_index];
+                                        if selected.status == AppStatus::Down {
+                                            app.show_error(format!(
+                                                "Cannot connect to '{}'\n\nThe application is DOWN or unreachable.\nCheck that the server is running and try again.",
+                                                selected.name
+                                            ));
+                                        } else {
+                                            // Connect to the selected app and show dashboard
+                                            let url = selected.url.clone();
+                                            app.config.active_app_url = Some(url);
+                                            app.active_resource = "dashboard".to_string();
+                                            app.filter_text.clear();
+                                            app.filter_active = false;
+                                            if let Err(e) = app.fetch_dashboard().await {
+                                                app.show_error(format!("Failed to fetch dashboard: {}", e));
+                                            }
                                         }
                                     } else {
                                         handle_describe(&mut app);
@@ -401,45 +467,24 @@ async fn run_tui() -> Result<()> {
                                     {
                                         let dump =
                                             &app.saved_heap_dumps[app.selected_heap_dump_index];
-                                        if let Err(e) = std::process::Command::new("open")
-                                            .arg("-a")
-                                            .arg("VisualVM")
-                                            .arg("--args")
-                                            .arg("--openfile")
-                                            .arg(&dump.path)
-                                            .stdout(std::process::Stdio::null())
-                                            .stderr(std::process::Stdio::null())
-                                            .spawn()
-                                        {
-                                            app.error_message =
-                                                Some(format!("Failed to start VisualVM: {}", e));
+                                        if let Err(e) = launch_visualvm_file(&dump.path) {
+                                            app.show_error(e);
                                         }
                                     } else if app.active_resource == "threaddump"
                                         && !app.saved_thread_dumps.is_empty()
                                     {
                                         let dump =
                                             &app.saved_thread_dumps[app.selected_thread_dump_index];
-                                        // Use the .tdump file for VisualVM
                                         let tdump_path = dump.path
                                             .replace(".json", ".tdump")
                                             .replace(".txt", ".tdump");
                                         if std::path::Path::new(&tdump_path).exists() {
-                                            if let Err(e) = std::process::Command::new("open")
-                                                .arg("-a")
-                                                .arg("VisualVM")
-                                                .arg("--args")
-                                                .arg("--openfile")
-                                                .arg(&tdump_path)
-                                                .stdout(std::process::Stdio::null())
-                                                .stderr(std::process::Stdio::null())
-                                                .spawn()
-                                            {
-                                                app.error_message =
-                                                    Some(format!("Failed to start VisualVM: {}", e));
+                                            if let Err(e) = launch_visualvm_file(&tdump_path) {
+                                                app.show_error(e);
                                             }
                                         } else {
-                                            app.error_message = Some(
-                                                "No .tdump file found. Take a new thread dump to generate one.".into()
+                                            app.show_error(
+                                                "No .tdump file found. Take a new thread dump to generate one."
                                             );
                                         }
                                     }
@@ -450,16 +495,22 @@ async fn run_tui() -> Result<()> {
                                     {
                                         let dump =
                                             &app.saved_heap_dumps[app.selected_heap_dump_index];
-                                        if let Err(e) = std::process::Command::new("open")
-                                            .arg("-a")
-                                            .arg("MemoryAnalyzer")
-                                            .arg(&dump.path)
-                                            .stdout(std::process::Stdio::null())
-                                            .stderr(std::process::Stdio::null())
-                                            .spawn()
-                                        {
-                                            app.error_message =
-                                                Some(format!("Failed to start Eclipse MAT: {}", e));
+                                        if let Err(e) = launch_eclipse_mat(&dump.path) {
+                                            app.show_error(e);
+                                        }
+                                    }
+                                }
+                                KeyCode::Char('V') => {
+                                    if app.active_resource == "dashboard" {
+                                        match app.fetch_app_pid().await {
+                                            Ok(pid) => {
+                                                if let Err(e) = launch_visualvm_pid(&pid) {
+                                                    app.show_error(e);
+                                                }
+                                            }
+                                            Err(e) => {
+                                                app.show_error(format!("{}", e));
+                                            }
                                         }
                                     }
                                 }
@@ -478,7 +529,14 @@ async fn run_tui() -> Result<()> {
                         let mut handled_g = false;
                         match key.code {
                             KeyCode::Esc | KeyCode::Char('q') => {
-                                app.mode = Mode::Normal;
+                                // Return to ThreadViz if we came from there
+                                if !app.parsed_threads.is_empty()
+                                    && app.active_resource == "threaddump"
+                                {
+                                    app.mode = Mode::ThreadViz;
+                                } else {
+                                    app.mode = Mode::Normal;
+                                }
                             }
                             KeyCode::Char('j') | KeyCode::Down => {
                                 app.describe_scroll = app.describe_scroll.saturating_add(1);
@@ -515,6 +573,80 @@ async fn run_tui() -> Result<()> {
                     }
 
                     // -------------------------------------------------------
+                    // THREAD VIZ mode
+                    // -------------------------------------------------------
+                    Mode::ThreadViz => {
+                        match key.code {
+                            KeyCode::Esc | KeyCode::Char('q') => {
+                                app.mode = Mode::Normal;
+                            }
+                            KeyCode::Char('j') | KeyCode::Down => {
+                                if app.thread_viz_scroll + 1 < app.parsed_threads.len() {
+                                    app.thread_viz_scroll += 1;
+                                }
+                            }
+                            KeyCode::Char('k') | KeyCode::Up => {
+                                app.thread_viz_scroll =
+                                    app.thread_viz_scroll.saturating_sub(1);
+                            }
+                            KeyCode::Char('G') | KeyCode::End => {
+                                app.thread_viz_scroll =
+                                    app.parsed_threads.len().saturating_sub(1);
+                            }
+                            KeyCode::Home => {
+                                app.thread_viz_scroll = 0;
+                            }
+                            KeyCode::Enter | KeyCode::Char('d') => {
+                                // Show stack trace of selected thread in describe
+                                if let Some(t) =
+                                    app.parsed_threads.get(app.thread_viz_scroll)
+                                {
+                                    app.describe_title =
+                                        format!("\"{}\" #{} {}", t.name, t.id, t.state);
+                                    let mut content = format!(
+                                        "Thread: {}\nID:     {}\nState:  {}\nDaemon: {}\n\n",
+                                        t.name,
+                                        t.id,
+                                        t.state,
+                                        if t.daemon { "yes" } else { "no" }
+                                    );
+                                    if t.stack_trace.is_empty() {
+                                        content.push_str("(no stack trace)");
+                                    } else {
+                                        content.push_str("Stack Trace:\n");
+                                        for frame in &t.stack_trace {
+                                            let location = if frame.native_method {
+                                                "Native Method".to_string()
+                                            } else if !frame.file_name.is_empty() {
+                                                if frame.line_number >= 0 {
+                                                    format!(
+                                                        "{}:{}",
+                                                        frame.file_name, frame.line_number
+                                                    )
+                                                } else {
+                                                    frame.file_name.clone()
+                                                }
+                                            } else {
+                                                "Unknown Source".to_string()
+                                            };
+                                            content.push_str(&format!(
+                                                "  at {}.{}({})\n",
+                                                frame.class_name,
+                                                frame.method_name,
+                                                location
+                                            ));
+                                        }
+                                    }
+                                    app.describe_content = content;
+                                    app.describe_scroll = 0;
+                                    app.mode = Mode::Describe;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    // -------------------------------------------------------
                     // CONFIRM mode (modal dialog)
                     // -------------------------------------------------------
                     Mode::Confirm => match key.code {
@@ -525,6 +657,19 @@ async fn run_tui() -> Result<()> {
                             // Execute the confirmed action
                             handle_confirm_action(&mut app);
                             app.mode = Mode::Normal;
+                        }
+                        _ => {}
+                    },
+
+                    // -------------------------------------------------------
+                    // ERROR MODAL mode
+                    // -------------------------------------------------------
+                    Mode::ErrorModal => match key.code {
+                        KeyCode::Enter | KeyCode::Esc => {
+                            app.mode = app
+                                .error_prev_mode
+                                .take()
+                                .unwrap_or(Mode::Normal);
                         }
                         _ => {}
                     },
@@ -787,8 +932,7 @@ async fn run_tui() -> Result<()> {
                 #[allow(dead_code)]
                 AppEvent::DataFetched { resource, result } => {
                     if let Err(err_msg) = result {
-                        app.error_message =
-                            Some(format!("Failed to fetch {}: {}", resource, err_msg));
+                        app.show_error(format!("Failed to fetch {}: {}", resource, err_msg));
                     }
                 }
                 AppEvent::ScanProgress(msg) => {
@@ -871,7 +1015,91 @@ async fn check_health_static(client: &reqwest::Client, url: &str) -> AppStatus {
 // Helper: handle Describe action based on active resource
 // ---------------------------------------------------------------------------
 
+/// Parse thread dump JSON into structured ThreadInfo vec.
+fn parse_thread_dump_json(body: &serde_json::Value) -> Vec<crate::model::ThreadInfo> {
+    let mut threads = Vec::new();
+    if let Some(arr) = body.get("threads").and_then(|t| t.as_array()) {
+        for thread in arr {
+            let name = thread
+                .get("threadName")
+                .and_then(|n| n.as_str())
+                .unwrap_or("unknown")
+                .to_string();
+            let id = thread.get("threadId").and_then(|i| i.as_i64()).unwrap_or(0);
+            let state = thread
+                .get("threadState")
+                .and_then(|s| s.as_str())
+                .unwrap_or("UNKNOWN")
+                .to_string();
+            let daemon = thread
+                .get("daemon")
+                .and_then(|d| d.as_bool())
+                .unwrap_or(false);
+
+            let stack_trace = thread
+                .get("stackTrace")
+                .and_then(|s| s.as_array())
+                .map(|frames| {
+                    frames
+                        .iter()
+                        .map(|f| crate::model::StackFrame {
+                            class_name: f
+                                .get("className")
+                                .and_then(|c| c.as_str())
+                                .unwrap_or("Unknown")
+                                .to_string(),
+                            method_name: f
+                                .get("methodName")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("unknown")
+                                .to_string(),
+                            file_name: f
+                                .get("fileName")
+                                .and_then(|f| f.as_str())
+                                .unwrap_or("")
+                                .to_string(),
+                            line_number: f
+                                .get("lineNumber")
+                                .and_then(|l| l.as_i64())
+                                .unwrap_or(-1),
+                            native_method: f
+                                .get("nativeMethod")
+                                .and_then(|n| n.as_bool())
+                                .unwrap_or(false),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            threads.push(crate::model::ThreadInfo {
+                name,
+                id,
+                state,
+                daemon,
+                stack_trace,
+            });
+        }
+    }
+    // Sort: RUNNABLE first, then BLOCKED, TIMED_WAITING, WAITING, rest
+    threads.sort_by(|a, b| {
+        fn state_order(s: &str) -> u8 {
+            match s.to_uppercase().as_str() {
+                "RUNNABLE" => 0,
+                "BLOCKED" => 1,
+                "TIMED_WAITING" => 2,
+                "WAITING" => 3,
+                _ => 4,
+            }
+        }
+        state_order(&a.state)
+            .cmp(&state_order(&b.state))
+            .then(a.name.cmp(&b.name))
+    });
+    threads
+}
+
 /// Format a thread dump JSON (from /actuator/threaddump) into readable text.
+#[allow(dead_code)]
 fn format_thread_dump_json(body: &serde_json::Value) -> String {
     let mut output = String::new();
     if let Some(threads) = body.get("threads").and_then(|t| t.as_array()) {
@@ -986,21 +1214,29 @@ fn handle_describe(app: &mut App) {
         "threaddump" => {
             if let Some(dump) = app.saved_thread_dumps.get(app.selected_thread_dump_index) {
                 let path = dump.path.clone();
-                app.describe_title = format!("Thread Dump: {}", dump.timestamp);
-                app.describe_content = match std::fs::read_to_string(&path) {
+                match std::fs::read_to_string(&path) {
                     Ok(content) => {
-                        // Try to parse as JSON and format nicely
                         if let Ok(body) = serde_json::from_str::<serde_json::Value>(&content) {
-                            format_thread_dump_json(&body)
+                            app.parsed_threads = parse_thread_dump_json(&body);
+                            app.thread_viz_scroll = 0;
+                            app.thread_viz_title =
+                                format!("Thread Dump: {} — {}", dump.app_name, dump.timestamp);
+                            app.mode = Mode::ThreadViz;
                         } else {
-                            // Already formatted text (old .txt files)
-                            content
+                            // Old .txt files — fall back to text describe
+                            app.describe_title = format!("Thread Dump: {}", dump.timestamp);
+                            app.describe_content = content;
+                            app.describe_scroll = 0;
+                            app.mode = Mode::Describe;
                         }
                     }
-                    Err(e) => format!("Failed to read {}: {}", path, e),
-                };
-                app.describe_scroll = 0;
-                app.mode = Mode::Describe;
+                    Err(e) => {
+                        app.describe_title = "Thread Dump — Error".into();
+                        app.describe_content = format!("Failed to read {}: {}", path, e);
+                        app.describe_scroll = 0;
+                        app.mode = Mode::Describe;
+                    }
+                }
             }
         }
         "heapdump" => {
@@ -1076,6 +1312,7 @@ async fn handle_resource_switch(
 
     let resource_key = match selected.command.as_str() {
         ":apps" => "apps",
+        ":dashboard" => "dashboard",
         ":endpoints" => "endpoints",
         ":beans" => "beans",
         ":loggers" => "loggers",
@@ -1093,29 +1330,34 @@ async fn handle_resource_switch(
 
     // Trigger fetch based on the selected resource
     match resource_key {
+        "dashboard" => {
+            if let Err(e) = app.fetch_dashboard().await {
+                app.show_error(format!("Failed to fetch dashboard: {}", e));
+            }
+        }
         "endpoints" => {
             if let Err(e) = app.fetch_endpoints().await {
-                app.error_message = Some(format!("Failed to fetch endpoints: {}", e));
+                app.show_error(format!("Failed to fetch endpoints: {}", e));
             }
         }
         "beans" => {
             if let Err(e) = app.fetch_beans().await {
-                app.error_message = Some(format!("Failed to fetch beans: {}", e));
+                app.show_error(format!("Failed to fetch beans: {}", e));
             }
         }
         "loggers" => {
             if let Err(e) = app.fetch_loggers().await {
-                app.error_message = Some(format!("Failed to fetch loggers: {}", e));
+                app.show_error(format!("Failed to fetch loggers: {}", e));
             }
         }
         "mappings" => {
             if let Err(e) = app.fetch_mappings().await {
-                app.error_message = Some(format!("Failed to fetch mappings: {}", e));
+                app.show_error(format!("Failed to fetch mappings: {}", e));
             }
         }
         "env" => {
             if let Err(e) = app.fetch_env().await {
-                app.error_message = Some(format!("Failed to fetch env: {}", e));
+                app.show_error(format!("Failed to fetch env: {}", e));
             }
         }
         "threaddump" | "heapdump" => {
@@ -1155,29 +1397,34 @@ async fn refresh_resource(app: &mut App, resource: &str, tx: mpsc::Sender<AppEve
                 }
             });
         }
+        "dashboard" => {
+            if let Err(e) = app.fetch_dashboard().await {
+                app.show_error(format!("Refresh failed: {}", e));
+            }
+        }
         "endpoints" => {
             if let Err(e) = app.fetch_endpoints().await {
-                app.error_message = Some(format!("Refresh failed: {}", e));
+                app.show_error(format!("Refresh failed: {}", e));
             }
         }
         "beans" => {
             if let Err(e) = app.fetch_beans().await {
-                app.error_message = Some(format!("Refresh failed: {}", e));
+                app.show_error(format!("Refresh failed: {}", e));
             }
         }
         "loggers" => {
             if let Err(e) = app.fetch_loggers().await {
-                app.error_message = Some(format!("Refresh failed: {}", e));
+                app.show_error(format!("Refresh failed: {}", e));
             }
         }
         "mappings" => {
             if let Err(e) = app.fetch_mappings().await {
-                app.error_message = Some(format!("Refresh failed: {}", e));
+                app.show_error(format!("Refresh failed: {}", e));
             }
         }
         "env" => {
             if let Err(e) = app.fetch_env().await {
-                app.error_message = Some(format!("Refresh failed: {}", e));
+                app.show_error(format!("Refresh failed: {}", e));
             }
         }
         _ => {}

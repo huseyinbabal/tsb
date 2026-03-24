@@ -24,6 +24,8 @@ pub enum Mode {
     ServerDialog,
     EditLogger,
     NewProject,
+    ThreadViz,
+    ErrorModal,
 }
 
 // ---------------------------------------------------------------------------
@@ -31,7 +33,7 @@ pub enum Mode {
 // ---------------------------------------------------------------------------
 
 /// A single entry in the command palette / resource list.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ResourceItem {
     pub name: String,
     pub command: String,
@@ -151,12 +153,23 @@ impl Default for NewProjectWizardState {
 
 impl NewProjectWizardState {
     /// Populate defaults from loaded metadata.
+    /// Only overwrite wizard defaults when the metadata provides a non-empty value.
     pub fn apply_metadata_defaults(&mut self, meta: &crate::model::InitializrMetadata) {
-        self.group_id = meta.group_id_default.clone();
-        self.artifact_id = meta.artifact_id_default.clone();
-        self.name = meta.name_default.clone();
-        self.description = meta.description_default.clone();
-        self.package_name = meta.package_name_default.clone();
+        if !meta.group_id_default.is_empty() {
+            self.group_id = meta.group_id_default.clone();
+        }
+        if !meta.artifact_id_default.is_empty() {
+            self.artifact_id = meta.artifact_id_default.clone();
+        }
+        if !meta.name_default.is_empty() {
+            self.name = meta.name_default.clone();
+        }
+        if !meta.description_default.is_empty() {
+            self.description = meta.description_default.clone();
+        }
+        if !meta.package_name_default.is_empty() {
+            self.package_name = meta.package_name_default.clone();
+        }
 
         self.boot_version_idx = meta
             .boot_versions
@@ -267,6 +280,7 @@ pub struct App {
     pub env_props: Vec<EnvProperty>,
     #[allow(dead_code)]
     pub server_info: Option<ServerInfo>,
+    pub dashboard: crate::model::DashboardData,
 
     // -- selection indices ---------------------------------------------------
     pub selected_app_index: usize,
@@ -301,7 +315,7 @@ pub struct App {
     pub config: TsbConfig,
 
     // -- transient UI state -------------------------------------------------
-    pub error_message: Option<String>,
+    pub error_prev_mode: Option<Mode>,
     pub modal_title: String,
     pub modal_msg: String,
     #[allow(dead_code)]
@@ -318,6 +332,11 @@ pub struct App {
     pub saved_heap_dumps: Vec<crate::model::SavedDump>,
     pub selected_thread_dump_index: usize,
     pub selected_heap_dump_index: usize,
+
+    // -- thread visualization -------------------------------------------------
+    pub parsed_threads: Vec<crate::model::ThreadInfo>,
+    pub thread_viz_scroll: usize,
+    pub thread_viz_title: String,
 
     // -- HTTP ----------------------------------------------------------------
     pub http_client: reqwest::Client,
@@ -344,6 +363,11 @@ impl App {
                 name: "Apps".into(),
                 command: ":apps".into(),
                 description: "List connected Spring Boot applications".into(),
+            },
+            ResourceItem {
+                name: "Dashboard".into(),
+                command: ":dashboard".into(),
+                description: "Application health, metrics and JVM overview".into(),
             },
             ResourceItem {
                 name: "Endpoints".into(),
@@ -416,6 +440,7 @@ impl App {
             mappings: Vec::new(),
             env_props: Vec::new(),
             server_info: None,
+            dashboard: crate::model::DashboardData::default(),
 
             selected_app_index: 0,
             selected_endpoint_index: 0,
@@ -443,7 +468,7 @@ impl App {
 
             config,
 
-            error_message: None,
+            error_prev_mode: None,
             modal_title: String::new(),
             modal_msg: String::new(),
             width: 0,
@@ -456,6 +481,10 @@ impl App {
             saved_heap_dumps: Vec::new(),
             selected_thread_dump_index: 0,
             selected_heap_dump_index: 0,
+
+            parsed_threads: Vec::new(),
+            thread_viz_scroll: 0,
+            thread_viz_title: String::new(),
 
             http_client,
         })
@@ -786,6 +815,15 @@ impl App {
             .unwrap_or_else(|| "No server".into())
     }
 
+    /// Show an error in a modal dialog. Saves the current mode so it can
+    /// be restored when the user dismisses the dialog.
+    pub fn show_error(&mut self, msg: impl Into<String>) {
+        self.modal_title = "Error".into();
+        self.modal_msg = msg.into();
+        self.error_prev_mode = Some(self.mode.clone());
+        self.mode = Mode::ErrorModal;
+    }
+
     // -----------------------------------------------------------------------
     // Data fetching (async, reqwest)
     // -----------------------------------------------------------------------
@@ -852,6 +890,293 @@ impl App {
         }
 
         Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // Dashboard
+    // -----------------------------------------------------------------------
+
+    /// Helper: fetch a single metric value from `/actuator/metrics/{name}`.
+    async fn fetch_metric(&self, base_url: &str, name: &str) -> Option<f64> {
+        let url = format!("{}/actuator/metrics/{}", base_url.trim_end_matches('/'), name);
+        let resp = self.http_client.get(&url).send().await.ok()?;
+        let body: Value = resp.json().await.ok()?;
+        body.get("measurements")
+            .and_then(|m| m.as_array())
+            .and_then(|arr| arr.first())
+            .and_then(|m| m.get("value"))
+            .and_then(|v| v.as_f64())
+    }
+
+    /// Fetch dashboard data from multiple actuator endpoints.
+    pub async fn fetch_dashboard(&mut self) -> Result<()> {
+        let base_url = self.active_app_url().context("no active app selected")?;
+        let mut data = crate::model::DashboardData::default();
+
+        // -- Health -----------------------------------------------------------
+        if let Ok(resp) = self
+            .http_client
+            .get(format!("{}/actuator/health", base_url.trim_end_matches('/')))
+            .send()
+            .await
+        {
+            if let Ok(body) = resp.json::<Value>().await {
+                data.app_status = body
+                    .get("status")
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("UNKNOWN")
+                    .to_string();
+                if let Some(components) = body.get("components").and_then(|c| c.as_object()) {
+                    for (name, comp) in components {
+                        let status = comp
+                            .get("status")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("UNKNOWN")
+                            .to_string();
+                        let details = comp
+                            .get("details")
+                            .map(|d| {
+                                d.as_object()
+                                    .map(|obj| {
+                                        obj.iter()
+                                            .map(|(k, v)| {
+                                                format!(
+                                                    "{}={}",
+                                                    k,
+                                                    v.as_str()
+                                                        .map(|s| s.to_string())
+                                                        .unwrap_or_else(|| v.to_string())
+                                                )
+                                            })
+                                            .collect::<Vec<_>>()
+                                            .join(", ")
+                                    })
+                                    .unwrap_or_default()
+                            })
+                            .unwrap_or_default();
+                        data.health_components.push(crate::model::HealthComponent {
+                            name: name.clone(),
+                            status,
+                            details,
+                        });
+                    }
+                }
+            }
+        }
+
+        // -- JVM Memory -------------------------------------------------------
+        if let Some(v) = self.fetch_metric(&base_url, "jvm.memory.used").await {
+            // This is total, we'll also try heap specifically
+            data.nonheap_used_mb = v / 1_048_576.0;
+        }
+        if let Some(v) = self
+            .fetch_metric(&base_url, "jvm.memory.used")
+            .await
+        {
+            // Try to get heap-specific values via tags
+            let heap_url = format!(
+                "{}/actuator/metrics/jvm.memory.used?tag=area:heap",
+                base_url.trim_end_matches('/')
+            );
+            if let Ok(resp) = self.http_client.get(&heap_url).send().await {
+                if let Ok(body) = resp.json::<Value>().await {
+                    if let Some(val) = body
+                        .get("measurements")
+                        .and_then(|m| m.as_array())
+                        .and_then(|arr| arr.first())
+                        .and_then(|m| m.get("value"))
+                        .and_then(|v| v.as_f64())
+                    {
+                        data.heap_used_mb = val / 1_048_576.0;
+                        data.nonheap_used_mb = (v / 1_048_576.0) - data.heap_used_mb;
+                    }
+                }
+            }
+        }
+        if self.fetch_metric(&base_url, "jvm.memory.max").await.is_some() {
+            // Try heap-specific max
+            let heap_url = format!(
+                "{}/actuator/metrics/jvm.memory.max?tag=area:heap",
+                base_url.trim_end_matches('/')
+            );
+            if let Ok(resp) = self.http_client.get(&heap_url).send().await {
+                if let Ok(body) = resp.json::<Value>().await {
+                    if let Some(val) = body
+                        .get("measurements")
+                        .and_then(|m| m.as_array())
+                        .and_then(|arr| arr.first())
+                        .and_then(|m| m.get("value"))
+                        .and_then(|v| v.as_f64())
+                    {
+                        data.heap_max_mb = val / 1_048_576.0;
+                    }
+                }
+            }
+        }
+
+        // -- Threads ----------------------------------------------------------
+        if let Some(v) = self.fetch_metric(&base_url, "jvm.threads.live").await {
+            data.threads_live = v as u64;
+        }
+        if let Some(v) = self.fetch_metric(&base_url, "jvm.threads.peak").await {
+            data.threads_peak = v as u64;
+        }
+        if let Some(v) = self.fetch_metric(&base_url, "jvm.threads.daemon").await {
+            data.threads_daemon = v as u64;
+        }
+
+        // -- CPU --------------------------------------------------------------
+        if let Some(v) = self.fetch_metric(&base_url, "system.cpu.usage").await {
+            data.cpu_system = v * 100.0;
+        }
+        if let Some(v) = self.fetch_metric(&base_url, "process.cpu.usage").await {
+            data.cpu_process = v * 100.0;
+        }
+
+        // -- GC ---------------------------------------------------------------
+        if let Some(v) = self.fetch_metric(&base_url, "jvm.gc.pause").await {
+            // COUNT measurement
+            let gc_url = format!(
+                "{}/actuator/metrics/jvm.gc.pause",
+                base_url.trim_end_matches('/')
+            );
+            if let Ok(resp) = self.http_client.get(&gc_url).send().await {
+                if let Ok(body) = resp.json::<Value>().await {
+                    if let Some(measurements) =
+                        body.get("measurements").and_then(|m| m.as_array())
+                    {
+                        for m in measurements {
+                            let stat = m.get("statistic").and_then(|s| s.as_str()).unwrap_or("");
+                            let val = m.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            match stat {
+                                "COUNT" => data.gc_pause_count = val as u64,
+                                "TOTAL_TIME" => data.gc_pause_total_ms = val * 1000.0,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
+            let _ = v; // suppress unused warning
+        }
+
+        // -- HTTP requests ----------------------------------------------------
+        let http_url = format!(
+            "{}/actuator/metrics/http.server.requests",
+            base_url.trim_end_matches('/')
+        );
+        if let Ok(resp) = self.http_client.get(&http_url).send().await {
+            if let Ok(body) = resp.json::<Value>().await {
+                if let Some(measurements) = body.get("measurements").and_then(|m| m.as_array()) {
+                    for m in measurements {
+                        let stat = m.get("statistic").and_then(|s| s.as_str()).unwrap_or("");
+                        let val = m.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        match stat {
+                            "COUNT" => data.http_total_count = val as u64,
+                            "TOTAL_TIME" => data.http_total_time_s = val,
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+        // HTTP 5xx errors
+        let err_url = format!(
+            "{}/actuator/metrics/http.server.requests?tag=outcome:SERVER_ERROR",
+            base_url.trim_end_matches('/')
+        );
+        if let Ok(resp) = self.http_client.get(&err_url).send().await {
+            if let Ok(body) = resp.json::<Value>().await {
+                if let Some(measurements) = body.get("measurements").and_then(|m| m.as_array()) {
+                    for m in measurements {
+                        let stat = m.get("statistic").and_then(|s| s.as_str()).unwrap_or("");
+                        if stat == "COUNT" {
+                            data.http_error_count =
+                                m.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0) as u64;
+                        }
+                    }
+                }
+            }
+        }
+
+        // -- Uptime -----------------------------------------------------------
+        if let Some(v) = self.fetch_metric(&base_url, "process.uptime").await {
+            data.uptime_seconds = v;
+        }
+
+        // -- Info -------------------------------------------------------------
+        let info_url = format!(
+            "{}/actuator/info",
+            base_url.trim_end_matches('/')
+        );
+        if let Ok(resp) = self.http_client.get(&info_url).send().await {
+            if let Ok(body) = resp.json::<Value>().await {
+                if let Some(java) = body
+                    .pointer("/java/version")
+                    .or_else(|| body.pointer("/java/runtime/version"))
+                    .and_then(|v| v.as_str())
+                {
+                    data.java_version = java.to_string();
+                }
+                if let Some(sb) = body
+                    .pointer("/build/version")
+                    .and_then(|v| v.as_str())
+                {
+                    data.spring_boot_version = sb.to_string();
+                }
+            }
+        }
+
+        // -- Env: active profiles ---------------------------------------------
+        let env_url = format!(
+            "{}/actuator/env",
+            base_url.trim_end_matches('/')
+        );
+        if let Ok(resp) = self.http_client.get(&env_url).send().await {
+            if let Ok(body) = resp.json::<Value>().await {
+                if let Some(profiles) = body.get("activeProfiles").and_then(|p| p.as_array()) {
+                    data.active_profiles = profiles
+                        .iter()
+                        .filter_map(|p| p.as_str().map(String::from))
+                        .collect();
+                }
+            }
+        }
+
+        // -- Disk -------------------------------------------------------------
+        if let Some(v) = self.fetch_metric(&base_url, "disk.free").await {
+            data.disk_free_gb = v / 1_073_741_824.0;
+        }
+        if let Some(v) = self.fetch_metric(&base_url, "disk.total").await {
+            data.disk_total_gb = v / 1_073_741_824.0;
+        }
+
+        self.dashboard = data;
+        Ok(())
+    }
+
+    /// Fetch the PID of the connected Spring Boot application from actuator.
+    /// Requires `management.endpoint.env.show-values=ALWAYS` in the app config.
+    pub async fn fetch_app_pid(&self) -> Result<String> {
+        let base_url = self.active_app_url().context("no active app selected")?;
+
+        let url = format!("{}/actuator/env/PID", base_url.trim_end_matches('/'));
+        if let Ok(resp) = self.http_client.get(&url).send().await {
+            if let Ok(body) = resp.json::<Value>().await {
+                if let Some(val) = body.get("property").and_then(|p| p.get("value")) {
+                    let pid = val.as_str().map(String::from).unwrap_or_else(|| val.to_string());
+                    if !pid.is_empty() && pid != "null" && !pid.contains('*') {
+                        return Ok(pid);
+                    }
+                }
+            }
+        }
+
+        anyhow::bail!(
+            "Could not determine PID. The value may be masked.\n\
+             Add this to your application.properties:\n\
+             management.endpoint.env.show-values=ALWAYS"
+        )
     }
 
     /// Fetch the list of actuator endpoints from `/actuator`.
@@ -1518,5 +1843,1764 @@ impl App {
     /// specified output directory. Returns the path of the extracted project.
     pub fn generate_project(params: &NewProjectParams) -> Result<String> {
         crate::generator::generate_project(params)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    /// Create a minimal App for testing. Avoids the full App::new() which
+    /// touches the filesystem for config.
+    fn test_app() -> App {
+        let resources = vec![
+            ResourceItem {
+                name: "Apps".into(),
+                command: ":apps".into(),
+                description: "List connected Spring Boot applications".into(),
+            },
+            ResourceItem {
+                name: "Dashboard".into(),
+                command: ":dashboard".into(),
+                description: "Application health, metrics and JVM overview".into(),
+            },
+            ResourceItem {
+                name: "Beans".into(),
+                command: ":beans".into(),
+                description: "View registered Spring beans".into(),
+            },
+            ResourceItem {
+                name: "Loggers".into(),
+                command: ":loggers".into(),
+                description: "View and manage logger levels".into(),
+            },
+        ];
+        App {
+            mode: Mode::Normal,
+            should_quit: false,
+            active_resource: "apps".into(),
+            apps: vec![
+                SpringApp {
+                    name: "app-one".into(),
+                    url: "http://localhost:8080".into(),
+                    status: AppStatus::Up,
+                },
+                SpringApp {
+                    name: "app-two".into(),
+                    url: "http://localhost:9090".into(),
+                    status: AppStatus::Down,
+                },
+                SpringApp {
+                    name: "backend-service".into(),
+                    url: "http://localhost:7070".into(),
+                    status: AppStatus::Up,
+                },
+            ],
+            endpoints: vec![
+                Endpoint { name: "health".into(), url: "/actuator/health".into() },
+                Endpoint { name: "info".into(), url: "/actuator/info".into() },
+            ],
+            beans: vec![
+                Bean { name: "myBean".into(), scope: "singleton".into(), type_name: "com.example.MyBean".into() },
+                Bean { name: "dataSource".into(), scope: "singleton".into(), type_name: "javax.sql.DataSource".into() },
+            ],
+            loggers: vec![
+                Logger { name: "com.example".into(), configured_level: Some("DEBUG".into()), effective_level: "DEBUG".into() },
+                Logger { name: "org.springframework".into(), configured_level: None, effective_level: "INFO".into() },
+            ],
+            mappings: vec![
+                Mapping { pattern: "/api/users".into(), handler: "UserController#list".into() },
+            ],
+            env_props: vec![
+                EnvProperty { name: "server.port".into(), value: "8080".into(), source: "application.properties".into() },
+            ],
+            server_info: None,
+            dashboard: DashboardData::default(),
+            selected_app_index: 0,
+            selected_endpoint_index: 0,
+            selected_bean_index: 0,
+            selected_logger_index: 0,
+            selected_mapping_index: 0,
+            selected_env_index: 0,
+            describe_scroll: 0,
+            describe_content: String::new(),
+            describe_title: String::new(),
+            filter_text: String::new(),
+            filter_active: false,
+            command_suggestions: (0..resources.len()).collect(),
+            command_text: String::new(),
+            command_suggestion_selected: 0,
+            resources,
+            splash_state: SplashState::default(),
+            server_dialog_state: ServerDialogState::default(),
+            edit_logger_state: EditLoggerState::default(),
+            new_project_state: NewProjectWizardState::default(),
+            config: crate::config::TsbConfig::default(),
+            error_prev_mode: None,
+            modal_title: String::new(),
+            modal_msg: String::new(),
+            width: 0,
+            height: 0,
+            spinner_frame: 0,
+            last_key_press: None,
+            saved_thread_dumps: Vec::new(),
+            saved_heap_dumps: Vec::new(),
+            selected_thread_dump_index: 0,
+            selected_heap_dump_index: 0,
+            parsed_threads: Vec::new(),
+            thread_viz_scroll: 0,
+            thread_viz_title: String::new(),
+            http_client: reqwest::Client::new(),
+        }
+    }
+
+    // =====================================================================
+    // filtered_indices
+    // =====================================================================
+
+    #[test]
+    fn filtered_indices_no_filter_returns_all() {
+        let app = test_app();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn filtered_indices_by_name() {
+        let mut app = test_app();
+        app.filter_text = "backend".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![2]);
+    }
+
+    #[test]
+    fn filtered_indices_by_url() {
+        let mut app = test_app();
+        app.filter_text = "9090".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![1]);
+    }
+
+    #[test]
+    fn filtered_indices_by_status() {
+        let mut app = test_app();
+        app.filter_text = "down".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![1]);
+    }
+
+    #[test]
+    fn filtered_indices_case_insensitive() {
+        let mut app = test_app();
+        app.filter_text = "APP-ONE".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![0]);
+    }
+
+    #[test]
+    fn filtered_indices_no_match() {
+        let mut app = test_app();
+        app.filter_text = "nonexistent".into();
+        let indices = app.filtered_indices();
+        assert!(indices.is_empty());
+    }
+
+    #[test]
+    fn filtered_indices_endpoints() {
+        let mut app = test_app();
+        app.active_resource = "endpoints".into();
+        app.filter_text = "health".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![0]);
+    }
+
+    #[test]
+    fn filtered_indices_beans() {
+        let mut app = test_app();
+        app.active_resource = "beans".into();
+        app.filter_text = "DataSource".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![1]);
+    }
+
+    #[test]
+    fn filtered_indices_loggers_by_effective_level() {
+        let mut app = test_app();
+        app.active_resource = "loggers".into();
+        app.filter_text = "info".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![1]);
+    }
+
+    #[test]
+    fn filtered_indices_unknown_resource() {
+        let mut app = test_app();
+        app.active_resource = "unknown".into();
+        let indices = app.filtered_indices();
+        assert!(indices.is_empty());
+    }
+
+    // =====================================================================
+    // Navigation: next / previous / go_to_top / go_to_bottom
+    // =====================================================================
+
+    #[test]
+    fn next_moves_forward() {
+        let mut app = test_app();
+        assert_eq!(app.selected_app_index, 0);
+        app.next();
+        assert_eq!(app.selected_app_index, 1);
+        app.next();
+        assert_eq!(app.selected_app_index, 2);
+    }
+
+    #[test]
+    fn next_stays_at_last() {
+        let mut app = test_app();
+        app.selected_app_index = 2;
+        app.next();
+        assert_eq!(app.selected_app_index, 2);
+    }
+
+    #[test]
+    fn previous_moves_back() {
+        let mut app = test_app();
+        app.selected_app_index = 2;
+        app.previous();
+        assert_eq!(app.selected_app_index, 1);
+    }
+
+    #[test]
+    fn previous_stays_at_first() {
+        let mut app = test_app();
+        app.previous();
+        assert_eq!(app.selected_app_index, 0);
+    }
+
+    #[test]
+    fn next_on_empty_list_is_noop() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.next();
+        assert_eq!(app.selected_app_index, 0);
+    }
+
+    #[test]
+    fn go_to_top() {
+        let mut app = test_app();
+        app.selected_app_index = 2;
+        app.go_to_top();
+        assert_eq!(app.selected_app_index, 0);
+    }
+
+    #[test]
+    fn go_to_bottom() {
+        let mut app = test_app();
+        app.go_to_bottom();
+        assert_eq!(app.selected_app_index, 2);
+    }
+
+    #[test]
+    fn navigation_respects_filter() {
+        let mut app = test_app();
+        // Filter to only "app-one" (index 0) and "app-two" (index 1)
+        app.filter_text = "app-".into();
+        app.selected_app_index = 0;
+        app.next();
+        assert_eq!(app.selected_app_index, 1); // next filtered item
+        app.next();
+        assert_eq!(app.selected_app_index, 1); // stays at last filtered
+    }
+
+    // =====================================================================
+    // active_index / active_index_mut
+    // =====================================================================
+
+    #[test]
+    fn active_index_dispatches_correctly() {
+        let mut app = test_app();
+        app.active_resource = "beans".into();
+        app.selected_bean_index = 1;
+        assert_eq!(app.active_index(), 1);
+
+        app.active_resource = "loggers".into();
+        app.selected_logger_index = 0;
+        assert_eq!(app.active_index(), 0);
+    }
+
+    // =====================================================================
+    // active_app_url / current_server_name
+    // =====================================================================
+
+    #[test]
+    fn active_app_url_from_config() {
+        let mut app = test_app();
+        app.config.active_app_url = Some("http://override:1234".into());
+        assert_eq!(
+            app.active_app_url(),
+            Some("http://override:1234".into())
+        );
+    }
+
+    #[test]
+    fn active_app_url_fallback_to_selected() {
+        let app = test_app();
+        assert_eq!(
+            app.active_app_url(),
+            Some("http://localhost:8080".into())
+        );
+    }
+
+    #[test]
+    fn active_app_url_empty_apps_and_no_config() {
+        let mut app = test_app();
+        app.apps.clear();
+        assert_eq!(app.active_app_url(), None);
+    }
+
+    #[test]
+    fn current_server_name_from_active_url() {
+        let mut app = test_app();
+        app.config.active_app_url = Some("http://localhost:9090".into());
+        assert_eq!(app.current_server_name(), "app-two");
+    }
+
+    #[test]
+    fn current_server_name_no_server() {
+        let mut app = test_app();
+        app.apps.clear();
+        assert_eq!(app.current_server_name(), "No server");
+    }
+
+    // =====================================================================
+    // show_error
+    // =====================================================================
+
+    #[test]
+    fn show_error_sets_modal_and_mode() {
+        let mut app = test_app();
+        app.mode = Mode::Normal;
+        app.show_error("something went wrong");
+        assert_eq!(app.mode, Mode::ErrorModal);
+        assert_eq!(app.modal_title, "Error");
+        assert_eq!(app.modal_msg, "something went wrong");
+        assert_eq!(app.error_prev_mode, Some(Mode::Normal));
+    }
+
+    #[test]
+    fn show_error_preserves_previous_mode() {
+        let mut app = test_app();
+        app.mode = Mode::Describe;
+        app.show_error("test");
+        assert_eq!(app.error_prev_mode, Some(Mode::Describe));
+    }
+
+    // =====================================================================
+    // update_command_suggestions / get_selected_command
+    // =====================================================================
+
+    #[test]
+    fn command_suggestions_empty_query_returns_all() {
+        let mut app = test_app();
+        app.command_text = "".into();
+        app.update_command_suggestions();
+        assert_eq!(app.command_suggestions.len(), app.resources.len());
+    }
+
+    #[test]
+    fn command_suggestions_filter_by_name() {
+        let mut app = test_app();
+        app.command_text = "bean".into();
+        app.update_command_suggestions();
+        assert_eq!(app.command_suggestions.len(), 1);
+        let cmd = app.get_selected_command().unwrap();
+        assert_eq!(cmd.name, "Beans");
+    }
+
+    #[test]
+    fn command_suggestions_filter_by_command() {
+        let mut app = test_app();
+        app.command_text = ":dashboard".into();
+        app.update_command_suggestions();
+        assert_eq!(app.command_suggestions.len(), 1);
+        let cmd = app.get_selected_command().unwrap();
+        assert_eq!(cmd.command, ":dashboard");
+    }
+
+    #[test]
+    fn command_suggestions_filter_by_description() {
+        let mut app = test_app();
+        app.command_text = "Spring".into();
+        app.update_command_suggestions();
+        // "List connected Spring Boot applications" in Apps description
+        assert!(!app.command_suggestions.is_empty());
+    }
+
+    #[test]
+    fn command_suggestions_no_match() {
+        let mut app = test_app();
+        app.command_text = "zzzzz".into();
+        app.update_command_suggestions();
+        assert!(app.command_suggestions.is_empty());
+        assert_eq!(app.get_selected_command(), None);
+    }
+
+    #[test]
+    fn command_suggestions_resets_selection() {
+        let mut app = test_app();
+        app.command_suggestion_selected = 5;
+        app.command_text = "bean".into();
+        app.update_command_suggestions();
+        assert_eq!(app.command_suggestion_selected, 0);
+    }
+
+    // =====================================================================
+    // on_tick
+    // =====================================================================
+
+    #[test]
+    fn on_tick_advances_spinner() {
+        let mut app = test_app();
+        assert_eq!(app.spinner_frame, 0);
+        app.on_tick();
+        assert_eq!(app.spinner_frame, 1);
+    }
+
+    // =====================================================================
+    // parse_initializr_metadata
+    // =====================================================================
+
+    #[test]
+    fn parse_metadata_full() {
+        let body = json!({
+            "bootVersion": {
+                "default": "3.4.0",
+                "values": [
+                    {"id": "3.4.0", "name": "3.4.0"},
+                    {"id": "3.3.0", "name": "3.3.0"}
+                ]
+            },
+            "language": {
+                "default": "java",
+                "values": [
+                    {"id": "java", "name": "Java"},
+                    {"id": "kotlin", "name": "Kotlin"}
+                ]
+            },
+            "packaging": {
+                "default": "jar",
+                "values": [{"id": "jar", "name": "Jar"}]
+            },
+            "javaVersion": {
+                "default": "21",
+                "values": [{"id": "21", "name": "21"}]
+            },
+            "type": {
+                "default": "maven-project",
+                "values": [{"id": "maven-project", "name": "Maven"}]
+            },
+            "dependencies": {
+                "values": [{
+                    "name": "Web",
+                    "values": [
+                        {"id": "web", "name": "Spring Web", "description": "Build web apps"}
+                    ]
+                }]
+            },
+            "groupId": {"default": "com.example"},
+            "artifactId": {"default": "demo"},
+            "name": {"default": "demo"},
+            "description": {"default": "Demo project"},
+            "version": {"default": "0.0.1-SNAPSHOT"},
+            "packageName": {"default": "com.example.demo"}
+        });
+
+        let meta = App::parse_initializr_metadata(&body).unwrap();
+        assert_eq!(meta.boot_versions.len(), 2);
+        assert_eq!(meta.boot_version_default, "3.4.0");
+        assert_eq!(meta.languages.len(), 2);
+        assert_eq!(meta.language_default, "java");
+        assert_eq!(meta.group_id_default, "com.example");
+        assert_eq!(meta.name_default, "demo");
+        assert_eq!(meta.dependency_groups.len(), 1);
+        assert_eq!(meta.dependency_groups[0].values[0].id, "web");
+    }
+
+    #[test]
+    fn parse_metadata_empty_json() {
+        let body = json!({});
+        let meta = App::parse_initializr_metadata(&body).unwrap();
+        assert!(meta.boot_versions.is_empty());
+        assert!(meta.dependency_groups.is_empty());
+        assert_eq!(meta.group_id_default, "");
+    }
+
+    #[test]
+    fn parse_metadata_missing_name_default() {
+        let body = json!({
+            "name": {"type": "text"},
+            "groupId": {"default": "org.test"}
+        });
+        let meta = App::parse_initializr_metadata(&body).unwrap();
+        assert_eq!(meta.name_default, ""); // no default key
+        assert_eq!(meta.group_id_default, "org.test");
+    }
+
+    // =====================================================================
+    // thread_dump_to_jvm_text
+    // =====================================================================
+
+    #[test]
+    fn thread_dump_to_text_basic() {
+        let body = json!({
+            "threads": [{
+                "threadName": "main",
+                "threadId": 1,
+                "threadState": "RUNNABLE",
+                "daemon": false,
+                "stackTrace": [{
+                    "className": "com.example.Main",
+                    "methodName": "run",
+                    "fileName": "Main.java",
+                    "lineNumber": 42,
+                    "nativeMethod": false
+                }]
+            }]
+        });
+
+        let text = App::thread_dump_to_jvm_text(&body);
+        assert!(text.contains("\"main\" #1 java.lang.Thread.State: RUNNABLE"));
+        assert!(text.contains("at com.example.Main.run(Main.java:42)"));
+    }
+
+    #[test]
+    fn thread_dump_to_text_daemon() {
+        let body = json!({
+            "threads": [{
+                "threadName": "gc",
+                "threadId": 2,
+                "threadState": "WAITING",
+                "daemon": true,
+                "stackTrace": []
+            }]
+        });
+
+        let text = App::thread_dump_to_jvm_text(&body);
+        assert!(text.contains("\"gc\" #2 daemon java.lang.Thread.State: WAITING"));
+    }
+
+    #[test]
+    fn thread_dump_to_text_native_method() {
+        let body = json!({
+            "threads": [{
+                "threadName": "t1",
+                "threadId": 3,
+                "threadState": "RUNNABLE",
+                "daemon": false,
+                "stackTrace": [{
+                    "className": "java.net.SocketInputStream",
+                    "methodName": "read0",
+                    "fileName": null,
+                    "lineNumber": -2,
+                    "nativeMethod": true
+                }]
+            }]
+        });
+
+        let text = App::thread_dump_to_jvm_text(&body);
+        assert!(text.contains("at java.net.SocketInputStream.read0(Native Method)"));
+    }
+
+    #[test]
+    fn thread_dump_to_text_empty_threads() {
+        let body = json!({"threads": []});
+        let text = App::thread_dump_to_jvm_text(&body);
+        assert!(text.contains("Full thread dump"));
+        // No thread entries
+        assert!(!text.contains("java.lang.Thread.State"));
+    }
+
+    #[test]
+    fn thread_dump_to_text_missing_threads_key() {
+        let body = json!({});
+        let text = App::thread_dump_to_jvm_text(&body);
+        assert!(text.contains("Full thread dump"));
+    }
+
+    // =====================================================================
+    // NewProjectWizardState::apply_metadata_defaults
+    // =====================================================================
+
+    #[test]
+    fn apply_metadata_defaults_populates_fields() {
+        let mut ws = NewProjectWizardState::default();
+        let meta = InitializrMetadata {
+            boot_versions: vec![
+                InitializrOption { id: "3.3.0".into(), name: "3.3.0".into() },
+                InitializrOption { id: "3.4.0".into(), name: "3.4.0".into() },
+            ],
+            boot_version_default: "3.4.0".into(),
+            languages: vec![
+                InitializrOption { id: "java".into(), name: "Java".into() },
+                InitializrOption { id: "kotlin".into(), name: "Kotlin".into() },
+            ],
+            language_default: "kotlin".into(),
+            packagings: vec![InitializrOption { id: "jar".into(), name: "Jar".into() }],
+            packaging_default: "jar".into(),
+            java_versions: vec![
+                InitializrOption { id: "17".into(), name: "17".into() },
+                InitializrOption { id: "21".into(), name: "21".into() },
+            ],
+            java_version_default: "21".into(),
+            project_types: vec![InitializrOption { id: "maven-project".into(), name: "Maven".into() }],
+            project_type_default: "maven-project".into(),
+            dependency_groups: vec![],
+            group_id_default: "org.test".into(),
+            artifact_id_default: "myproject".into(),
+            version_default: "1.0.0".into(),
+            name_default: "myproject".into(),
+            description_default: "My desc".into(),
+            package_name_default: "org.test.myproject".into(),
+        };
+
+        ws.apply_metadata_defaults(&meta);
+
+        assert_eq!(ws.group_id, "org.test");
+        assert_eq!(ws.artifact_id, "myproject");
+        assert_eq!(ws.name, "myproject");
+        assert_eq!(ws.description, "My desc");
+        assert_eq!(ws.package_name, "org.test.myproject");
+        assert_eq!(ws.boot_version_idx, 1); // "3.4.0" is at index 1
+        assert_eq!(ws.language_idx, 1); // "kotlin" is at index 1
+        assert_eq!(ws.java_version_idx, 1); // "21" is at index 1
+    }
+
+    #[test]
+    fn apply_metadata_defaults_empty_values_preserve_wizard_defaults() {
+        let mut ws = NewProjectWizardState::default();
+        let original_name = ws.name.clone();
+        let original_group = ws.group_id.clone();
+
+        let meta = InitializrMetadata {
+            boot_versions: vec![],
+            boot_version_default: "".into(),
+            languages: vec![],
+            language_default: "".into(),
+            packagings: vec![],
+            packaging_default: "".into(),
+            java_versions: vec![],
+            java_version_default: "".into(),
+            project_types: vec![],
+            project_type_default: "".into(),
+            dependency_groups: vec![],
+            group_id_default: "".into(),
+            artifact_id_default: "".into(),
+            version_default: "".into(),
+            name_default: "".into(), // empty -> should NOT overwrite
+            description_default: "".into(),
+            package_name_default: "".into(),
+        };
+
+        ws.apply_metadata_defaults(&meta);
+
+        assert_eq!(ws.name, original_name); // "demo" preserved
+        assert_eq!(ws.group_id, original_group); // "com.example" preserved
+    }
+
+    #[test]
+    fn apply_metadata_default_not_found_falls_back_to_zero() {
+        let mut ws = NewProjectWizardState::default();
+        let meta = InitializrMetadata {
+            boot_versions: vec![
+                InitializrOption { id: "3.3.0".into(), name: "3.3.0".into() },
+            ],
+            boot_version_default: "nonexistent".into(),
+            languages: vec![],
+            language_default: "".into(),
+            packagings: vec![],
+            packaging_default: "".into(),
+            java_versions: vec![],
+            java_version_default: "".into(),
+            project_types: vec![],
+            project_type_default: "".into(),
+            dependency_groups: vec![],
+            group_id_default: "".into(),
+            artifact_id_default: "".into(),
+            version_default: "".into(),
+            name_default: "".into(),
+            description_default: "".into(),
+            package_name_default: "".into(),
+        };
+
+        ws.apply_metadata_defaults(&meta);
+        assert_eq!(ws.boot_version_idx, 0); // default not found -> 0
+    }
+
+    // =====================================================================
+    // Async HTTP tests (wiremock)
+    // =====================================================================
+
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    /// Create a test App pointed at a mock server URL.
+    fn test_app_with_url(base_url: &str) -> App {
+        let mut app = test_app();
+        app.apps = vec![crate::model::SpringApp {
+            name: "mock-app".into(),
+            url: base_url.to_string(),
+            status: crate::model::AppStatus::Up,
+        }];
+        app.selected_app_index = 0;
+        app.config.active_app_url = Some(base_url.to_string());
+        app
+    }
+
+    // -- check_health --
+
+    #[tokio::test]
+    async fn check_health_up() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"status": "UP"})),
+            )
+            .mount(&server)
+            .await;
+
+        let app = test_app_with_url(&server.uri());
+        let status = app.check_health(&server.uri()).await.unwrap();
+        assert_eq!(status, crate::model::AppStatus::Up);
+    }
+
+    #[tokio::test]
+    async fn check_health_down_status() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"status": "DOWN"})),
+            )
+            .mount(&server)
+            .await;
+
+        let app = test_app_with_url(&server.uri());
+        let status = app.check_health(&server.uri()).await.unwrap();
+        assert_eq!(status, crate::model::AppStatus::Down);
+    }
+
+    #[tokio::test]
+    async fn check_health_http_error_returns_down() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+
+        let app = test_app_with_url(&server.uri());
+        let status = app.check_health(&server.uri()).await.unwrap();
+        assert_eq!(status, crate::model::AppStatus::Down);
+    }
+
+    #[tokio::test]
+    async fn check_health_unknown_status() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"status": "OUT_OF_SERVICE"})),
+            )
+            .mount(&server)
+            .await;
+
+        let app = test_app_with_url(&server.uri());
+        let status = app.check_health(&server.uri()).await.unwrap();
+        assert_eq!(status, crate::model::AppStatus::Unknown);
+    }
+
+    // -- fetch_endpoints --
+
+    #[tokio::test]
+    async fn fetch_endpoints_parses_links() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "_links": {
+                    "health": {"href": "/actuator/health"},
+                    "info": {"href": "/actuator/info"},
+                    "beans": {"href": "/actuator/beans"}
+                }
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_endpoints().await.unwrap();
+        assert_eq!(app.endpoints.len(), 3);
+        assert!(app.endpoints.iter().any(|e| e.name == "health"));
+        assert!(app.endpoints.iter().any(|e| e.name == "beans"));
+    }
+
+    #[tokio::test]
+    async fn fetch_endpoints_empty_links() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"_links": {}})),
+            )
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_endpoints().await.unwrap();
+        assert!(app.endpoints.is_empty());
+    }
+
+    // -- fetch_beans --
+
+    #[tokio::test]
+    async fn fetch_beans_parses_contexts() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/beans"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "contexts": {
+                    "application": {
+                        "beans": {
+                            "myService": {
+                                "scope": "singleton",
+                                "type": "com.example.MyService",
+                                "dependencies": []
+                            },
+                            "dataSource": {
+                                "scope": "singleton",
+                                "type": "javax.sql.DataSource",
+                                "dependencies": []
+                            }
+                        }
+                    }
+                }
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_beans().await.unwrap();
+        assert_eq!(app.beans.len(), 2);
+        assert!(app.beans.iter().any(|b| b.name == "myService"));
+        assert!(app
+            .beans
+            .iter()
+            .any(|b| b.type_name == "javax.sql.DataSource"));
+    }
+
+    // -- fetch_loggers --
+
+    #[tokio::test]
+    async fn fetch_loggers_parses_response() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/loggers"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "loggers": {
+                    "com.example": {
+                        "configuredLevel": "DEBUG",
+                        "effectiveLevel": "DEBUG"
+                    },
+                    "org.springframework": {
+                        "configuredLevel": null,
+                        "effectiveLevel": "INFO"
+                    }
+                }
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_loggers().await.unwrap();
+        assert_eq!(app.loggers.len(), 2);
+
+        let spring = app
+            .loggers
+            .iter()
+            .find(|l| l.name == "org.springframework")
+            .unwrap();
+        assert_eq!(spring.effective_level, "INFO");
+        assert!(spring.configured_level.is_none());
+    }
+
+    // -- set_logger_level --
+
+    #[tokio::test]
+    async fn set_logger_level_updates_local_state() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/actuator/loggers/com.example"))
+            .respond_with(ResponseTemplate::new(204))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        // Pre-populate a logger
+        app.loggers = vec![crate::model::Logger {
+            name: "com.example".into(),
+            configured_level: Some("INFO".into()),
+            effective_level: "INFO".into(),
+        }];
+
+        app.set_logger_level("com.example", "DEBUG").await.unwrap();
+        assert_eq!(app.loggers[0].configured_level, Some("DEBUG".into()));
+        assert_eq!(app.loggers[0].effective_level, "DEBUG");
+    }
+
+    #[tokio::test]
+    async fn set_logger_level_off_clears_configured() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/actuator/loggers/com.example"))
+            .respond_with(ResponseTemplate::new(204))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.loggers = vec![crate::model::Logger {
+            name: "com.example".into(),
+            configured_level: Some("DEBUG".into()),
+            effective_level: "DEBUG".into(),
+        }];
+
+        app.set_logger_level("com.example", "OFF").await.unwrap();
+        assert_eq!(app.loggers[0].configured_level, None);
+    }
+
+    // -- fetch_mappings --
+
+    #[tokio::test]
+    async fn fetch_mappings_parses_dispatcher_servlets() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/mappings"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "contexts": {
+                    "application": {
+                        "mappings": {
+                            "dispatcherServlets": {
+                                "dispatcherServlet": [
+                                    {
+                                        "predicate": "{GET /api/users}",
+                                        "handler": "UserController#list()"
+                                    },
+                                    {
+                                        "predicate": "{POST /api/users}",
+                                        "handler": "UserController#create()"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_mappings().await.unwrap();
+        assert_eq!(app.mappings.len(), 2);
+        assert!(app.mappings.iter().any(|m| m.handler.contains("list")));
+    }
+
+    // -- fetch_env --
+
+    #[tokio::test]
+    async fn fetch_env_parses_property_sources() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/env"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "propertySources": [{
+                    "name": "application.properties",
+                    "properties": {
+                        "server.port": {"value": "8080"},
+                        "spring.application.name": {"value": "demo"}
+                    }
+                }]
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_env().await.unwrap();
+        assert_eq!(app.env_props.len(), 2);
+        assert!(app
+            .env_props
+            .iter()
+            .any(|p| p.name == "server.port" && p.value == "8080"));
+        assert!(app
+            .env_props
+            .iter()
+            .any(|p| p.source == "application.properties"));
+    }
+
+    // -- fetch_app_pid --
+
+    #[tokio::test]
+    async fn fetch_app_pid_returns_pid() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/env/PID"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "property": {"value": "12345"}
+            })))
+            .mount(&server)
+            .await;
+
+        let app = test_app_with_url(&server.uri());
+        let pid = app.fetch_app_pid().await.unwrap();
+        assert_eq!(pid, "12345");
+    }
+
+    #[tokio::test]
+    async fn fetch_app_pid_masked_returns_error() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/env/PID"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "property": {"value": "******"}
+            })))
+            .mount(&server)
+            .await;
+
+        let app = test_app_with_url(&server.uri());
+        let result = app.fetch_app_pid().await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("management.endpoint.env.show-values"));
+    }
+
+    // -- fetch_dashboard (partial — test that it doesn't panic on partial data) --
+
+    #[tokio::test]
+    async fn fetch_dashboard_with_health_and_metrics() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "status": "UP",
+                "components": {
+                    "diskSpace": {"status": "UP", "details": {"free": 50000000000_i64}},
+                    "db": {"status": "UP"}
+                }
+            })))
+            .mount(&server)
+            .await;
+
+        // Metrics — just a few key ones
+        for (metric, value) in [
+            ("jvm.threads.live", 42.0),
+            ("jvm.threads.peak", 58.0),
+            ("jvm.threads.daemon", 38.0),
+            ("system.cpu.usage", 0.23),
+            ("process.cpu.usage", 0.08),
+            ("process.uptime", 86400.0),
+        ] {
+            Mock::given(method("GET"))
+                .and(path(format!("/actuator/metrics/{}", metric)))
+                .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "measurements": [{"statistic": "VALUE", "value": value}]
+                })))
+                .mount(&server)
+                .await;
+        }
+
+        // Return 404 for metrics we don't mock (dashboard should handle gracefully)
+        Mock::given(method("GET"))
+            .and(path("/actuator/info"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/env"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "activeProfiles": ["dev", "local"]
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_dashboard().await.unwrap();
+
+        assert_eq!(app.dashboard.app_status, "UP");
+        assert_eq!(app.dashboard.health_components.len(), 2);
+        assert_eq!(app.dashboard.threads_live, 42);
+        assert_eq!(app.dashboard.threads_peak, 58);
+        assert!((app.dashboard.cpu_system - 23.0).abs() < 0.1);
+        assert!((app.dashboard.uptime_seconds - 86400.0).abs() < 0.1);
+        assert_eq!(app.dashboard.active_profiles, vec!["dev", "local"]);
+    }
+
+    // -- fetch_dashboard: info with java/build versions --
+
+    #[tokio::test]
+    async fn fetch_dashboard_info_java_and_build_version() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "status": "UP"
+            })))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/info"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "java": {"version": "21.0.2"},
+                "build": {"version": "3.4.0"}
+            })))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/env"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_dashboard().await.unwrap();
+
+        assert_eq!(app.dashboard.java_version, "21.0.2");
+        assert_eq!(app.dashboard.spring_boot_version, "3.4.0");
+    }
+
+    // -- fetch_dashboard: GC pause parsing --
+
+    #[tokio::test]
+    async fn fetch_dashboard_gc_pause() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"status":"UP"})))
+            .mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/info"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/env"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server).await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/metrics/jvm.gc.pause"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "measurements": [
+                    {"statistic": "COUNT", "value": 15.0},
+                    {"statistic": "TOTAL_TIME", "value": 0.5},
+                    {"statistic": "MAX", "value": 0.05}
+                ]
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_dashboard().await.unwrap();
+
+        assert_eq!(app.dashboard.gc_pause_count, 15);
+        assert!((app.dashboard.gc_pause_total_ms - 500.0).abs() < 0.1);
+    }
+
+    // -- fetch_dashboard: disk metrics --
+
+    #[tokio::test]
+    async fn fetch_dashboard_disk_metrics() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"status":"UP"})))
+            .mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/info"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/env"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server).await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/metrics/disk.free"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "measurements": [{"statistic": "VALUE", "value": 53687091200.0}]
+            })))
+            .mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/metrics/disk.total"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "measurements": [{"statistic": "VALUE", "value": 107374182400.0}]
+            })))
+            .mount(&server).await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_dashboard().await.unwrap();
+
+        assert!((app.dashboard.disk_free_gb - 50.0).abs() < 0.5);
+        assert!((app.dashboard.disk_total_gb - 100.0).abs() < 0.5);
+    }
+
+    // -- fetch_dashboard: health component details --
+
+    #[tokio::test]
+    async fn fetch_dashboard_health_component_details() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "status": "UP",
+                "components": {
+                    "diskSpace": {
+                        "status": "UP",
+                        "details": {"free": 50000000000_i64, "total": 100000000000_i64}
+                    },
+                    "db": {"status": "DOWN"}
+                }
+            })))
+            .mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/info"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/env"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server).await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_dashboard().await.unwrap();
+
+        assert_eq!(app.dashboard.health_components.len(), 2);
+        let disk = app.dashboard.health_components.iter().find(|c| c.name == "diskSpace").unwrap();
+        assert_eq!(disk.status, "UP");
+        assert!(disk.details.contains("free"));
+        let db = app.dashboard.health_components.iter().find(|c| c.name == "db").unwrap();
+        assert_eq!(db.status, "DOWN");
+    }
+
+    // -- fetch_dashboard with no active app --
+
+    #[tokio::test]
+    async fn fetch_dashboard_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        let result = app.fetch_dashboard().await;
+        assert!(result.is_err());
+    }
+
+    // -- set_logger_level failure --
+
+    #[tokio::test]
+    async fn set_logger_level_http_failure() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/actuator/loggers/com.example"))
+            .respond_with(ResponseTemplate::new(500))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.loggers = vec![crate::model::Logger {
+            name: "com.example".into(),
+            configured_level: Some("INFO".into()),
+            effective_level: "INFO".into(),
+        }];
+
+        let result = app.set_logger_level("com.example", "DEBUG").await;
+        assert!(result.is_err());
+        // Local state should NOT be updated on failure
+        assert_eq!(app.loggers[0].configured_level, Some("INFO".into()));
+    }
+
+    // -- fetch endpoints/beans/loggers/mappings/env: no active app --
+
+    #[tokio::test]
+    async fn fetch_endpoints_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        assert!(app.fetch_endpoints().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn fetch_beans_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        assert!(app.fetch_beans().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn fetch_loggers_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        assert!(app.fetch_loggers().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn fetch_mappings_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        assert!(app.fetch_mappings().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn fetch_env_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        assert!(app.fetch_env().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn fetch_app_pid_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        assert!(app.fetch_app_pid().await.is_err());
+    }
+
+    // -- fetch_and_save_thread_dump error cases --
+
+    #[tokio::test]
+    async fn fetch_thread_dump_404() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/threaddump"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        let result = app.fetch_and_save_thread_dump().await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("not found") || err.contains("not available"));
+    }
+
+    #[tokio::test]
+    async fn fetch_thread_dump_500() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/threaddump"))
+            .respond_with(ResponseTemplate::new(500))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        let result = app.fetch_and_save_thread_dump().await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn fetch_thread_dump_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        assert!(app.fetch_and_save_thread_dump().await.is_err());
+    }
+
+    // -- download_heap_dump error cases --
+
+    #[tokio::test]
+    async fn download_heap_dump_404() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/heapdump"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        let result = app.download_heap_dump().await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("not found") || err.contains("not available"));
+    }
+
+    #[tokio::test]
+    async fn download_heap_dump_500() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/heapdump"))
+            .respond_with(ResponseTemplate::new(500))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        let result = app.download_heap_dump().await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn download_heap_dump_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        assert!(app.download_heap_dump().await.is_err());
+    }
+
+    // -- filtered_indices: remaining resources --
+
+    #[test]
+    fn filtered_indices_mappings() {
+        let mut app = test_app();
+        app.active_resource = "mappings".into();
+        app.filter_text = "users".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![0]);
+    }
+
+    #[test]
+    fn filtered_indices_env() {
+        let mut app = test_app();
+        app.active_resource = "env".into();
+        app.filter_text = "port".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![0]);
+    }
+
+    #[test]
+    fn filtered_indices_threaddump() {
+        let mut app = test_app();
+        app.active_resource = "threaddump".into();
+        app.saved_thread_dumps = vec![
+            crate::model::SavedDump {
+                app_url: "http://localhost:8080".into(),
+                app_name: "my-app".into(),
+                path: "/tmp/threaddump_20240101.json".into(),
+                timestamp: "20240101_120000".into(),
+                size_bytes: 1024,
+            },
+        ];
+        app.filter_text = "my-app".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![0]);
+
+        app.filter_text = "nonexistent".into();
+        let indices = app.filtered_indices();
+        assert!(indices.is_empty());
+    }
+
+    #[test]
+    fn filtered_indices_heapdump() {
+        let mut app = test_app();
+        app.active_resource = "heapdump".into();
+        app.saved_heap_dumps = vec![
+            crate::model::SavedDump {
+                app_url: "http://localhost:8080".into(),
+                app_name: "my-app".into(),
+                path: "/tmp/heapdump_20240101.hprof".into(),
+                timestamp: "20240101_120000".into(),
+                size_bytes: 1048576,
+            },
+        ];
+        app.filter_text = "hprof".into();
+        let indices = app.filtered_indices();
+        assert_eq!(indices, vec![0]);
+    }
+
+    // -- thread_dump_to_jvm_text: file without line number --
+
+    #[test]
+    fn thread_dump_to_text_file_no_line_number() {
+        let body = serde_json::json!({
+            "threads": [{
+                "threadName": "t1",
+                "threadId": 1,
+                "threadState": "RUNNABLE",
+                "daemon": false,
+                "stackTrace": [{
+                    "className": "com.example.Foo",
+                    "methodName": "bar",
+                    "fileName": "Foo.java",
+                    "lineNumber": -1,
+                    "nativeMethod": false
+                }]
+            }]
+        });
+        let text = App::thread_dump_to_jvm_text(&body);
+        assert!(text.contains("at com.example.Foo.bar(Foo.java)"));
+    }
+
+    // -- fetch_mappings with servlet filters (direct array format) --
+
+    #[tokio::test]
+    async fn fetch_mappings_with_servlet_filters() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/mappings"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "contexts": {
+                    "application": {
+                        "mappings": {
+                            "servletFilters": [
+                                {
+                                    "name": "characterEncodingFilter",
+                                    "className": "org.springframework.web.filter.CharacterEncodingFilter"
+                                }
+                            ]
+                        }
+                    }
+                }
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_mappings().await.unwrap();
+        assert_eq!(app.mappings.len(), 1);
+        assert!(app.mappings[0].handler.contains("characterEncodingFilter"));
+    }
+
+    // -- fetch_beans empty contexts --
+
+    #[tokio::test]
+    async fn fetch_beans_empty_contexts() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/beans"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "contexts": {}
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_beans().await.unwrap();
+        assert!(app.beans.is_empty());
+    }
+
+    // -- fetch_loggers with configured level --
+
+    #[tokio::test]
+    async fn fetch_loggers_with_configured_level() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/loggers"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "loggers": {
+                    "ROOT": {
+                        "configuredLevel": "WARN",
+                        "effectiveLevel": "WARN"
+                    }
+                }
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_loggers().await.unwrap();
+        assert_eq!(app.loggers.len(), 1);
+        assert_eq!(app.loggers[0].name, "ROOT");
+        assert_eq!(app.loggers[0].configured_level, Some("WARN".into()));
+    }
+
+    // -- fetch_and_save_thread_dump success --
+
+    #[tokio::test]
+    async fn fetch_thread_dump_success_saves_files() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/threaddump"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "threads": [{
+                    "threadName": "main",
+                    "threadId": 1,
+                    "threadState": "RUNNABLE",
+                    "daemon": false,
+                    "stackTrace": [{
+                        "className": "com.example.Main",
+                        "methodName": "run",
+                        "fileName": "Main.java",
+                        "lineNumber": 10,
+                        "nativeMethod": false
+                    }]
+                }]
+            })))
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        let result = app.fetch_and_save_thread_dump().await;
+        assert!(result.is_ok());
+
+        let path_str = result.unwrap();
+        assert!(path_str.ends_with(".json"));
+        assert!(std::path::Path::new(&path_str).exists());
+
+        // Check .tdump companion file exists
+        let tdump_path = path_str.replace(".json", ".tdump");
+        assert!(std::path::Path::new(&tdump_path).exists());
+
+        // Verify saved_thread_dumps was updated
+        assert_eq!(app.saved_thread_dumps.len(), 1);
+        assert_eq!(app.saved_thread_dumps[0].app_name, "mock-app");
+
+        // Cleanup
+        let _ = std::fs::remove_file(&path_str);
+        let _ = std::fs::remove_file(&tdump_path);
+    }
+
+    // -- download_heap_dump success --
+
+    #[tokio::test]
+    async fn download_heap_dump_success_saves_file() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/heapdump"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_bytes(vec![0xCA, 0xFE, 0xBA, 0xBE]),
+            )
+            .mount(&server)
+            .await;
+
+        let mut app = test_app_with_url(&server.uri());
+        let result = app.download_heap_dump().await;
+        assert!(result.is_ok());
+
+        let path_str = result.unwrap();
+        assert!(path_str.ends_with(".hprof"));
+        assert!(std::path::Path::new(&path_str).exists());
+
+        // Verify saved_heap_dumps was updated
+        assert_eq!(app.saved_heap_dumps.len(), 1);
+        assert_eq!(app.saved_heap_dumps[0].size_bytes, 4);
+
+        // Cleanup
+        let _ = std::fs::remove_file(&path_str);
+    }
+
+    // -- scan_saved_dumps --
+
+    #[test]
+    fn scan_saved_dumps_finds_files() {
+        let mut app = test_app();
+        app.config.active_app_url = Some("http://localhost:8080".into());
+        app.apps = vec![crate::model::SpringApp {
+            name: "test-scan-app".into(),
+            url: "http://localhost:8080".into(),
+            status: crate::model::AppStatus::Up,
+        }];
+
+        // Create temp dump files
+        let dir = App::app_dumps_dir("test-scan-app").unwrap();
+        let td_path = dir.join("threaddump_20240101_120000.json");
+        let hd_path = dir.join("heapdump_20240101_120000.hprof");
+        std::fs::write(&td_path, "{}").unwrap();
+        std::fs::write(&hd_path, &[0u8; 64]).unwrap();
+
+        app.scan_saved_dumps();
+
+        assert_eq!(app.saved_thread_dumps.len(), 1);
+        assert_eq!(app.saved_thread_dumps[0].timestamp, "20240101_120000");
+        assert_eq!(app.saved_heap_dumps.len(), 1);
+        assert_eq!(app.saved_heap_dumps[0].timestamp, "20240101_120000");
+
+        // Cleanup
+        let _ = std::fs::remove_file(&td_path);
+        let _ = std::fs::remove_file(&hd_path);
+        let _ = std::fs::remove_dir(&dir);
+    }
+
+    #[test]
+    fn scan_saved_dumps_sorts_newest_first() {
+        let mut app = test_app();
+        app.config.active_app_url = Some("http://localhost:8080".into());
+        app.apps = vec![crate::model::SpringApp {
+            name: "test-sort-app".into(),
+            url: "http://localhost:8080".into(),
+            status: crate::model::AppStatus::Up,
+        }];
+
+        let dir = App::app_dumps_dir("test-sort-app").unwrap();
+        let old = dir.join("threaddump_20240101_100000.json");
+        let new = dir.join("threaddump_20240202_120000.json");
+        std::fs::write(&old, "{}").unwrap();
+        std::fs::write(&new, "{}").unwrap();
+
+        app.scan_saved_dumps();
+
+        assert_eq!(app.saved_thread_dumps.len(), 2);
+        assert_eq!(app.saved_thread_dumps[0].timestamp, "20240202_120000"); // newest first
+
+        let _ = std::fs::remove_file(&old);
+        let _ = std::fs::remove_file(&new);
+        let _ = std::fs::remove_dir(&dir);
+    }
+
+    // -- HTTP request metrics in dashboard --
+
+    #[tokio::test]
+    async fn fetch_dashboard_http_request_metrics() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/health"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"status":"UP"})))
+            .mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/info"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/actuator/env"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+            .mount(&server).await;
+
+        Mock::given(method("GET"))
+            .and(path("/actuator/metrics/http.server.requests"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "measurements": [
+                    {"statistic": "COUNT", "value": 5000.0},
+                    {"statistic": "TOTAL_TIME", "value": 120.0}
+                ]
+            })))
+            .mount(&server).await;
+
+        let mut app = test_app_with_url(&server.uri());
+        app.fetch_dashboard().await.unwrap();
+
+        assert_eq!(app.dashboard.http_total_count, 5000);
+        assert!((app.dashboard.http_total_time_s - 120.0).abs() < 0.1);
+    }
+
+    // -- set_logger_level no active app --
+
+    #[tokio::test]
+    async fn set_logger_level_no_active_app() {
+        let mut app = test_app();
+        app.apps.clear();
+        app.config.active_app_url = None;
+        assert!(app.set_logger_level("com.example", "DEBUG").await.is_err());
     }
 }

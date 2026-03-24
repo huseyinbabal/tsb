@@ -209,8 +209,20 @@ pub fn generate_project(params: &NewProjectParams) -> Result<String> {
     std::fs::create_dir_all(&project_dir)
         .with_context(|| format!("failed to create directory {}", project_dir.display()))?;
 
-    // Derive class name from artifact_id: "my-app" -> "MyApp"
-    let application_name = to_pascal_case(&params.name);
+    // Derive class name: prefer name, fall back to artifact_id
+    let raw_name = if params.name.is_empty() {
+        &params.artifact_id
+    } else {
+        &params.name
+    };
+    let application_name = {
+        let pascal = to_pascal_case(raw_name);
+        if pascal.is_empty() {
+            "Application".to_string()
+        } else {
+            pascal
+        }
+    };
     let is_kotlin = params.language == "kotlin";
     let is_maven = params.project_type == "maven-project";
     let is_gradle_kotlin = params.project_type == "gradle-project-kotlin";
@@ -389,4 +401,278 @@ fn normalize_boot_version(raw: &str) -> String {
         }
     }
     raw.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::NewProjectParams;
+
+    // -- to_pascal_case --
+
+    #[test]
+    fn pascal_case_simple() {
+        assert_eq!(to_pascal_case("demo"), "Demo");
+    }
+
+    #[test]
+    fn pascal_case_hyphenated() {
+        assert_eq!(to_pascal_case("my-demo-app"), "MyDemoApp");
+    }
+
+    #[test]
+    fn pascal_case_underscored() {
+        assert_eq!(to_pascal_case("my_demo_app"), "MyDemoApp");
+    }
+
+    #[test]
+    fn pascal_case_spaces() {
+        assert_eq!(to_pascal_case("my demo app"), "MyDemoApp");
+    }
+
+    #[test]
+    fn pascal_case_mixed_separators() {
+        assert_eq!(to_pascal_case("my-demo_app name"), "MyDemoAppName");
+    }
+
+    #[test]
+    fn pascal_case_uppercase_input() {
+        assert_eq!(to_pascal_case("UPPER-CASE"), "UpperCase");
+    }
+
+    #[test]
+    fn pascal_case_empty() {
+        assert_eq!(to_pascal_case(""), "");
+    }
+
+    #[test]
+    fn pascal_case_leading_trailing_separators() {
+        assert_eq!(to_pascal_case("--leading--"), "Leading");
+    }
+
+    #[test]
+    fn pascal_case_single_char() {
+        assert_eq!(to_pascal_case("a"), "A");
+    }
+
+    // -- normalize_boot_version --
+
+    #[test]
+    fn normalize_release_suffix() {
+        assert_eq!(normalize_boot_version("3.2.0.RELEASE"), "3.2.0");
+    }
+
+    #[test]
+    fn normalize_snapshot_unchanged() {
+        assert_eq!(normalize_boot_version("3.3.0-SNAPSHOT"), "3.3.0-SNAPSHOT");
+    }
+
+    #[test]
+    fn normalize_build_snapshot_passes_through() {
+        // ".BUILD-SNAPSHOT" ends with "-SNAPSHOT", so the second branch catches it
+        assert_eq!(
+            normalize_boot_version("3.2.0.BUILD-SNAPSHOT"),
+            "3.2.0.BUILD-SNAPSHOT"
+        );
+    }
+
+    #[test]
+    fn normalize_milestone() {
+        assert_eq!(normalize_boot_version("3.3.0.M1"), "3.3.0-M1");
+    }
+
+    #[test]
+    fn normalize_release_candidate() {
+        assert_eq!(normalize_boot_version("3.3.0.RC1"), "3.3.0-RC1");
+    }
+
+    #[test]
+    fn normalize_plain_version() {
+        assert_eq!(normalize_boot_version("3.2.0"), "3.2.0");
+    }
+
+    // -- generate_project (integration test with temp dir) --
+
+    #[test]
+    fn generate_maven_java_project() {
+        let tmp = std::env::temp_dir().join("tsb_test_gen_maven");
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        let params = NewProjectParams {
+            boot_version: "3.4.5".into(),
+            language: "java".into(),
+            packaging: "jar".into(),
+            java_version: "21".into(),
+            project_type: "maven-project".into(),
+            group_id: "com.test".into(),
+            artifact_id: "myapp".into(),
+            version: "0.0.1-SNAPSHOT".into(),
+            name: "myapp".into(),
+            description: "Test project".into(),
+            package_name: "com.test.myapp".into(),
+            dependencies: vec!["web".into()],
+            output_dir: tmp.to_str().unwrap().into(),
+        };
+
+        let result = generate_project(&params);
+        assert!(
+            result.is_ok(),
+            "generate_project failed: {:?}",
+            result.err()
+        );
+
+        let project_dir = tmp.join("myapp");
+        assert!(project_dir.join("pom.xml").exists());
+        assert!(project_dir
+            .join("src/main/java/com/test/myapp/Myapp.java")
+            .exists());
+        assert!(project_dir
+            .join("src/test/java/com/test/myapp/MyappTests.java")
+            .exists());
+        assert!(project_dir
+            .join("src/main/resources/application.properties")
+            .exists());
+
+        // Verify pom.xml contains expected content
+        let pom = std::fs::read_to_string(project_dir.join("pom.xml")).unwrap();
+        assert!(pom.contains("<groupId>com.test</groupId>"));
+        assert!(pom.contains("<artifactId>myapp</artifactId>"));
+        assert!(pom.contains("spring-boot-starter-webmvc"));
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn generate_gradle_kotlin_project() {
+        let tmp = std::env::temp_dir().join("tsb_test_gen_gradle_kt");
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        let params = NewProjectParams {
+            boot_version: "3.4.5".into(),
+            language: "kotlin".into(),
+            packaging: "jar".into(),
+            java_version: "21".into(),
+            project_type: "gradle-project-kotlin".into(),
+            group_id: "com.test".into(),
+            artifact_id: "ktapp".into(),
+            version: "0.0.1-SNAPSHOT".into(),
+            name: "ktapp".into(),
+            description: "Kotlin test".into(),
+            package_name: "com.test.ktapp".into(),
+            dependencies: vec![],
+            output_dir: tmp.to_str().unwrap().into(),
+        };
+
+        let result = generate_project(&params);
+        assert!(
+            result.is_ok(),
+            "generate_project failed: {:?}",
+            result.err()
+        );
+
+        let project_dir = tmp.join("ktapp");
+        assert!(project_dir.join("build.gradle.kts").exists());
+        assert!(project_dir.join("settings.gradle.kts").exists());
+        assert!(project_dir
+            .join("src/main/kotlin/com/test/ktapp/Ktapp.kt")
+            .exists());
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn generate_gradle_groovy_project() {
+        let tmp = std::env::temp_dir().join("tsb_test_gen_gradle_groovy");
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        let params = NewProjectParams {
+            boot_version: "3.4.5".into(),
+            language: "java".into(),
+            packaging: "jar".into(),
+            java_version: "21".into(),
+            project_type: "gradle-project".into(),
+            group_id: "com.test".into(),
+            artifact_id: "gradleapp".into(),
+            version: "0.0.1-SNAPSHOT".into(),
+            name: "gradleapp".into(),
+            description: "Gradle test".into(),
+            package_name: "com.test.gradleapp".into(),
+            dependencies: vec![],
+            output_dir: tmp.to_str().unwrap().into(),
+        };
+
+        let result = generate_project(&params);
+        assert!(result.is_ok());
+
+        let project_dir = tmp.join("gradleapp");
+        assert!(project_dir.join("build.gradle").exists());
+        assert!(project_dir.join("settings.gradle").exists());
+        assert!(!project_dir.join("build.gradle.kts").exists());
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn generate_project_with_multiple_dependencies() {
+        let tmp = std::env::temp_dir().join("tsb_test_gen_multi_deps");
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        let params = NewProjectParams {
+            boot_version: "3.4.5".into(),
+            language: "java".into(),
+            packaging: "jar".into(),
+            java_version: "21".into(),
+            project_type: "maven-project".into(),
+            group_id: "com.test".into(),
+            artifact_id: "multidep".into(),
+            version: "0.0.1-SNAPSHOT".into(),
+            name: "multidep".into(),
+            description: "Test".into(),
+            package_name: "com.test.multidep".into(),
+            dependencies: vec!["web".into(), "actuator".into(), "validation".into()],
+            output_dir: tmp.to_str().unwrap().into(),
+        };
+
+        let result = generate_project(&params);
+        assert!(result.is_ok());
+
+        let pom = std::fs::read_to_string(tmp.join("multidep/pom.xml")).unwrap();
+        assert!(pom.contains("spring-boot-starter-webmvc"));
+        assert!(pom.contains("spring-boot-starter-actuator"));
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn generate_project_empty_name_falls_back_to_artifact_id() {
+        let tmp = std::env::temp_dir().join("tsb_test_gen_empty_name");
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        let params = NewProjectParams {
+            boot_version: "3.4.5".into(),
+            language: "java".into(),
+            packaging: "jar".into(),
+            java_version: "21".into(),
+            project_type: "maven-project".into(),
+            group_id: "com.example".into(),
+            artifact_id: "demo".into(),
+            version: "0.0.1-SNAPSHOT".into(),
+            name: "".into(), // empty name
+            description: "Test".into(),
+            package_name: "com.example.demo".into(),
+            dependencies: vec![],
+            output_dir: tmp.to_str().unwrap().into(),
+        };
+
+        let result = generate_project(&params);
+        assert!(result.is_ok());
+
+        // Should use artifact_id "demo" -> "Demo" as class name
+        let project_dir = tmp.join("demo");
+        assert!(project_dir
+            .join("src/main/java/com/example/demo/Demo.java")
+            .exists());
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
 }

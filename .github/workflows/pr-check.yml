@@ -18,3 +18,4 @@ jobs:
       run_fmt: true
       run_clippy: true
       run_security_scan: true
+      check_coverage: true
