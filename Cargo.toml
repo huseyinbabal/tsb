@@ -1,5 +1,5 @@
 [package]
-name = "tsb"
+name = "tspring"
 version = "1.0.0"
 edition = "2021"
 description = "Terminal UI for Spring Boot - A modern TUI for managing Spring Boot applications"
