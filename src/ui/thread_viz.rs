@@ -150,7 +150,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         .height(1);
 
         // Calculate bar width based on available space
-        let bar_width = (inner.width as usize).saturating_sub(60).max(8).min(30);
+        let bar_width = (inner.width as usize).saturating_sub(60).clamp(8, 30);
 
         let rows: Vec<Row> = threads
             .iter()
