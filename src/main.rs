@@ -1754,22 +1754,35 @@ async fn handle_new_project_key(app: &mut App, key: KeyCode, tx: mpsc::Sender<Ap
                     KeyCode::Esc => {
                         app.new_project_state.dep_filter_active = false;
                         app.new_project_state.dep_filter.clear();
-                        app.new_project_state.dep_item_idx = 0;
                     }
                     KeyCode::Enter => {
                         app.new_project_state.dep_filter_active = false;
-                        app.new_project_state.dep_item_idx = 0;
                     }
                     KeyCode::Backspace => {
                         app.new_project_state.dep_filter.pop();
-                        app.new_project_state.dep_item_idx = 0;
                     }
                     KeyCode::Char(c) => {
                         app.new_project_state.dep_filter.push(c);
-                        app.new_project_state.dep_item_idx = 0;
                     }
                     _ => {}
                 }
+                // After filter text changes, jump to first selectable item
+                let first_selectable = {
+                    let count = crate::ui::new_project::flat_dep_count(
+                        &meta,
+                        &app.new_project_state.dep_filter,
+                    );
+                    (0..count)
+                        .find(|&i| {
+                            crate::ui::new_project::flat_dep_is_selectable(
+                                &meta,
+                                &app.new_project_state.dep_filter,
+                                i,
+                            )
+                        })
+                        .unwrap_or(0)
+                };
+                app.new_project_state.dep_item_idx = first_selectable;
                 return;
             }
 
@@ -1783,7 +1796,6 @@ async fn handle_new_project_key(app: &mut App, key: KeyCode, tx: mpsc::Sender<Ap
                 KeyCode::Char('/') => {
                     app.new_project_state.dep_filter_active = true;
                     app.new_project_state.dep_filter.clear();
-                    app.new_project_state.dep_item_idx = 0;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
                     if total > 0 {
