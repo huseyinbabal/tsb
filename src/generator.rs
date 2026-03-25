@@ -539,6 +539,15 @@ mod tests {
         assert!(pom.contains("<artifactId>myapp</artifactId>"));
         assert!(pom.contains("spring-boot-starter-webmvc"));
 
+        // Verify application.properties contains management settings
+        let props =
+            std::fs::read_to_string(project_dir.join("src/main/resources/application.properties"))
+                .unwrap();
+        assert!(props.contains("spring.application.name=myapp"));
+        assert!(props.contains("management.endpoints.web.exposure.include=*"));
+        assert!(props.contains("management.endpoint.heapdump.enabled=true"));
+        assert!(props.contains("management.endpoint.env.show-values=ALWAYS"));
+
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

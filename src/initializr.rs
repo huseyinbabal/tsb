@@ -84,7 +84,11 @@ pub async fn run() -> Result<()> {
 
     // -- Step 3: Dependencies --
     println!();
-    let selected_deps = select_dependencies(&mut stdout, &meta.dependency_groups)?;
+    let mut selected_deps = select_dependencies(&mut stdout, &meta.dependency_groups)?;
+    // Ensure actuator is always included (required for tspring connectivity)
+    if !selected_deps.iter().any(|d| d == "actuator") {
+        selected_deps.push("actuator".to_string());
+    }
 
     // -- Step 4: Output directory --
     println!();
@@ -403,7 +407,10 @@ fn select_dependencies(
         }
     }
 
-    let mut selected: Vec<bool> = vec![false; all_deps.len()];
+    let mut selected: Vec<bool> = all_deps
+        .iter()
+        .map(|(_, id, _, _)| *id == "actuator")
+        .collect();
     let mut cursor_pos: usize = 0;
     let mut filter = String::new();
     let mut filter_active = false;
