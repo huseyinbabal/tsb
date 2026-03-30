@@ -6,7 +6,8 @@ on:
   workflow_dispatch: # Allow manual trigger via GitHub Actions UI
 
 permissions:
-  contents: write # Needed to push changes back to the repository
+  contents: write
+  pull-requests: write
 
 jobs:
   sync:
@@ -14,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.PAT }}
 
       - name: Create resources folder
         run: mkdir -p resources
@@ -30,16 +33,31 @@ jobs:
           
           rm resources/*.raw.json
 
-      - name: Commit and push changes
+      - name: Create PR with changes
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add resources/initializr-metadata.json resources/dependencies.json
           
           if git diff --staged --quiet; then
-            echo "No changes in metadata found. Skipping commit."
+            echo "No changes in metadata found. Skipping."
           else
-            git commit -m "chore: sync Spring Initializr metadata and dependencies [skip ci]"
-            git push
-            echo "Successfully updated and pushed new Initializr metadata."
+            BRANCH="chore/sync-initializr-metadata"
+            git checkout -b "$BRANCH"
+            git commit -m "chore: sync Spring Initializr metadata and dependencies"
+            git push --force origin "$BRANCH"
+            
+            EXISTING_PR=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+            if [ -n "$EXISTING_PR" ]; then
+              echo "PR #$EXISTING_PR already exists. Updated the branch."
+            else
+              gh pr create \
+                --title "chore: sync Spring Initializr metadata and dependencies" \
+                --body "Automated nightly sync of Spring Initializr metadata and dependencies." \
+                --head "$BRANCH" \
+                --base main
+              echo "Created new PR."
+            fi
           fi
