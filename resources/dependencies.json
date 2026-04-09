@@ -643,6 +643,11 @@
       "artifactId": "ojdbc11",
       "scope": "runtime"
     },
+    "sqlite": {
+      "groupId": "org.xerial",
+      "artifactId": "sqlite-jdbc",
+      "scope": "runtime"
+    },
     "configuration-processor": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-configuration-processor",
@@ -734,7 +739,7 @@
       "groupId": "org.springaicommunity",
       "artifactId": "mcp-server-security",
       "scope": "compile",
-      "version": "0.1.1"
+      "version": "0.1.5"
     },
     "mybatis": {
       "groupId": "org.mybatis.spring.boot",
@@ -1066,12 +1071,12 @@
     "spring-modulith": {
       "groupId": "org.springframework.modulith",
       "artifactId": "spring-modulith-bom",
-      "version": "2.0.3"
+      "version": "2.0.5"
     },
     "datasource-micrometer": {
       "groupId": "net.ttddyy.observation",
       "artifactId": "datasource-micrometer-bom",
-      "version": "2.2.0"
+      "version": "2.2.1"
     },
     "spring-cloud-services": {
       "groupId": "io.pivotal.spring.cloud",
@@ -1096,7 +1101,7 @@
     "spring-ai": {
       "groupId": "org.springframework.ai",
       "artifactId": "spring-ai-bom",
-      "version": "2.0.0-M3"
+      "version": "2.0.0-M4"
     },
     "sentry": {
       "groupId": "io.sentry",
