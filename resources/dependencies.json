@@ -1,5 +1,5 @@
 {
-  "bootVersion": "4.0.5",
+  "bootVersion": "4.0.6",
   "dependencies": {
     "amqp-streams": {
       "groupId": "org.springframework.amqp",
@@ -37,6 +37,12 @@
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-data-redis-reactive",
       "scope": "compile"
+    },
+    "camel": {
+      "groupId": "org.apache.camel.springboot",
+      "artifactId": "camel-spring-boot-starter",
+      "scope": "compile",
+      "version": "4.20.0"
     },
     "hazelcast": {
       "groupId": "org.springframework.boot",
@@ -380,11 +386,11 @@
       "artifactId": "spring-boot-starter-amqp",
       "scope": "compile"
     },
-    "spring-ai-vertexai-gemini": {
-      "groupId": "org.springframework.ai",
-      "artifactId": "spring-ai-starter-model-vertex-ai-gemini",
+    "timefold-solver": {
+      "groupId": "ai.timefold.solver",
+      "artifactId": "timefold-solver-spring-boot-starter",
       "scope": "compile",
-      "bom": "spring-ai"
+      "bom": "timefold-solver"
     },
     "rsocket": {
       "groupId": "org.springframework.boot",
@@ -513,7 +519,7 @@
       "groupId": "io.github.wimdeblauwe",
       "artifactId": "htmx-spring-boot",
       "scope": "compile",
-      "version": "5.0.0"
+      "version": "5.1.0"
     },
     "cloud-stream": {
       "groupId": "org.springframework.cloud",
@@ -598,12 +604,6 @@
       "scope": "compile",
       "bom": "spring-ai"
     },
-    "spring-ai-openai-sdk": {
-      "groupId": "org.springframework.ai",
-      "artifactId": "spring-ai-starter-model-openai-sdk",
-      "scope": "compile",
-      "bom": "spring-ai"
-    },
     "data-couchbase": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-data-couchbase",
@@ -625,12 +625,6 @@
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-webservices",
       "scope": "compile"
-    },
-    "spring-ai-azure-openai": {
-      "groupId": "org.springframework.ai",
-      "artifactId": "spring-ai-starter-model-azure-openai",
-      "scope": "compile",
-      "bom": "spring-ai"
     },
     "cloud-loadbalancer": {
       "groupId": "org.springframework.cloud",
@@ -739,7 +733,7 @@
       "groupId": "org.springaicommunity",
       "artifactId": "mcp-server-security",
       "scope": "compile",
-      "version": "0.1.5"
+      "version": "0.1.6"
     },
     "mybatis": {
       "groupId": "org.mybatis.spring.boot",
@@ -1046,12 +1040,12 @@
     "spring-cloud-azure": {
       "groupId": "com.azure.spring",
       "artifactId": "spring-cloud-azure-dependencies",
-      "version": "7.1.0"
+      "version": "7.2.0"
     },
     "codecentric-spring-boot-admin": {
       "groupId": "de.codecentric",
       "artifactId": "spring-boot-admin-dependencies",
-      "version": "4.0.2"
+      "version": "4.0.3"
     },
     "spring-cloud": {
       "groupId": "org.springframework.cloud",
@@ -1061,17 +1055,22 @@
     "netflix-dgs": {
       "groupId": "com.netflix.graphql.dgs",
       "artifactId": "graphql-dgs-platform-dependencies",
-      "version": "11.0.0"
+      "version": "11.1.0"
     },
     "spring-shell": {
       "groupId": "org.springframework.shell",
       "artifactId": "spring-shell-dependencies",
-      "version": "4.0.1"
+      "version": "4.0.2"
+    },
+    "timefold-solver": {
+      "groupId": "ai.timefold.solver",
+      "artifactId": "timefold-solver-bom",
+      "version": "2.0.0"
     },
     "spring-modulith": {
       "groupId": "org.springframework.modulith",
       "artifactId": "spring-modulith-bom",
-      "version": "2.0.5"
+      "version": "2.0.6"
     },
     "datasource-micrometer": {
       "groupId": "net.ttddyy.observation",
@@ -1086,22 +1085,22 @@
     "spring-cloud-gcp": {
       "groupId": "com.google.cloud",
       "artifactId": "spring-cloud-gcp-dependencies",
-      "version": "8.0.1"
+      "version": "8.0.2"
     },
     "vaadin": {
       "groupId": "com.vaadin",
       "artifactId": "vaadin-bom",
-      "version": "25.1.0"
+      "version": "25.1.3"
     },
     "spring-grpc": {
       "groupId": "org.springframework.grpc",
       "artifactId": "spring-grpc-dependencies",
-      "version": "1.0.2"
+      "version": "1.0.3"
     },
     "spring-ai": {
       "groupId": "org.springframework.ai",
       "artifactId": "spring-ai-bom",
-      "version": "2.0.0-M4"
+      "version": "2.0.0-M5"
     },
     "sentry": {
       "groupId": "io.sentry",

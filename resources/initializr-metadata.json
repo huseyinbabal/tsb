@@ -1095,7 +1095,7 @@
             "id": "camel",
             "name": "Apache Camel",
             "description": "Apache Camel is an open source integration framework that empowers you to quickly and easily integrate various systems consuming or producing data.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://camel.apache.org/camel-spring-boot/latest/spring-boot.html",
@@ -2063,7 +2063,7 @@
             "id": "spring-ai-azure-openai",
             "name": "Azure OpenAI",
             "description": "Spring AI support for Azure’s OpenAI offering, powered by ChatGPT. It extends beyond traditional OpenAI capabilities, delivering AI-driven text generation with enhanced functionality.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat/azure-openai-chat.html"
@@ -2382,7 +2382,7 @@
             "id": "spring-ai-openai-sdk",
             "name": "OpenAI SDK",
             "description": "Spring AI support for OpenAI using the official OpenAI SDK. Alternative implementation with enhanced features and compatibility.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat/openai-sdk-chat.html"
@@ -2580,7 +2580,7 @@
             "id": "spring-ai-vertexai-gemini",
             "name": "Vertex AI Gemini",
             "description": "Spring AI support for Google Vertex Gemini chat. Doesn't support embeddings.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat/vertexai-gemini-chat.html"
@@ -2686,7 +2686,7 @@
             "id": "timefold-solver",
             "name": "Timefold Solver",
             "description": "AI solver to optimize operations and scheduling.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://timefold.ai/docs/timefold-solver/latest/quickstart/spring-boot/spring-boot-quickstart#springBootJavaQuickStart"
@@ -2815,31 +2815,31 @@
   },
   "bootVersion": {
     "type": "single-select",
-    "default": "4.0.5.RELEASE",
+    "default": "4.0.6.RELEASE",
     "values": [
       {
         "id": "4.1.0.BUILD-SNAPSHOT",
         "name": "4.1.0 (SNAPSHOT)"
       },
       {
-        "id": "4.1.0.M4",
-        "name": "4.1.0 (M4)"
+        "id": "4.1.0.RC1",
+        "name": "4.1.0 (RC1)"
       },
       {
-        "id": "4.0.6.BUILD-SNAPSHOT",
-        "name": "4.0.6 (SNAPSHOT)"
+        "id": "4.0.7.BUILD-SNAPSHOT",
+        "name": "4.0.7 (SNAPSHOT)"
       },
       {
-        "id": "4.0.5.RELEASE",
-        "name": "4.0.5"
+        "id": "4.0.6.RELEASE",
+        "name": "4.0.6"
       },
       {
-        "id": "3.5.14.BUILD-SNAPSHOT",
-        "name": "3.5.14 (SNAPSHOT)"
+        "id": "3.5.15.BUILD-SNAPSHOT",
+        "name": "3.5.15 (SNAPSHOT)"
       },
       {
-        "id": "3.5.13.RELEASE",
-        "name": "3.5.13"
+        "id": "3.5.14.RELEASE",
+        "name": "3.5.14"
       }
     ]
   },
