@@ -1,5 +1,5 @@
 {
-  "bootVersion": "4.0.5",
+  "bootVersion": "4.1.1",
   "dependencies": {
     "amqp-streams": {
       "groupId": "org.springframework.amqp",
@@ -38,27 +38,21 @@
       "artifactId": "spring-boot-starter-data-redis-reactive",
       "scope": "compile"
     },
+    "camel": {
+      "groupId": "org.apache.camel.springboot",
+      "artifactId": "camel-spring-boot-starter",
+      "scope": "compile",
+      "version": "4.22.0"
+    },
     "hazelcast": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-hazelcast",
       "scope": "compile"
     },
-    "cloud-contract-stub-runner": {
-      "groupId": "org.springframework.cloud",
-      "artifactId": "spring-cloud-starter-contract-stub-runner",
-      "scope": "test",
-      "bom": "spring-cloud"
-    },
     "validation": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-validation",
       "scope": "compile"
-    },
-    "azure-support": {
-      "groupId": "com.azure.spring",
-      "artifactId": "spring-cloud-azure-starter",
-      "scope": "compile",
-      "bom": "spring-cloud-azure"
     },
     "modulith": {
       "groupId": "org.springframework.modulith",
@@ -76,12 +70,6 @@
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-cache",
       "scope": "compile"
-    },
-    "spring-shell": {
-      "groupId": "org.springframework.shell",
-      "artifactId": "spring-shell-starter",
-      "scope": "compile",
-      "bom": "spring-shell"
     },
     "spring-ai-chat-memory-repository-jdbc": {
       "groupId": "org.springframework.ai",
@@ -129,12 +117,6 @@
       "scope": "compile",
       "bom": "spring-ai"
     },
-    "azure-keyvault": {
-      "groupId": "com.azure.spring",
-      "artifactId": "spring-cloud-azure-starter-keyvault",
-      "scope": "compile",
-      "bom": "spring-cloud-azure"
-    },
     "data-cassandra": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-data-cassandra",
@@ -174,12 +156,6 @@
       "artifactId": "spring-boot-starter-kafka",
       "scope": "compile"
     },
-    "azure-active-directory": {
-      "groupId": "com.azure.spring",
-      "artifactId": "spring-cloud-azure-starter-active-directory",
-      "scope": "compile",
-      "bom": "spring-cloud-azure"
-    },
     "session-data-redis": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-session-data-redis",
@@ -217,6 +193,12 @@
       "scope": "compile",
       "bom": "spring-cloud"
     },
+    "spring-ai-vectordb-couchbase": {
+      "groupId": "org.springframework.ai",
+      "artifactId": "spring-ai-starter-vector-store-couchbase",
+      "scope": "compile",
+      "bom": "spring-ai"
+    },
     "spring-ai-vectordb-pinecone": {
       "groupId": "org.springframework.ai",
       "artifactId": "spring-ai-starter-vector-store-pinecone",
@@ -245,13 +227,12 @@
       "groupId": "org.springdoc",
       "artifactId": "springdoc-openapi-starter-webmvc-ui",
       "scope": "compile",
-      "version": "3.0.2"
+      "version": "3.1.0"
     },
     "spring-grpc-server": {
-      "groupId": "org.springframework.grpc",
-      "artifactId": "spring-grpc-server-spring-boot-starter",
-      "scope": "compile",
-      "bom": "spring-grpc"
+      "groupId": "org.springframework.boot",
+      "artifactId": "spring-boot-starter-grpc-server",
+      "scope": "compile"
     },
     "vaadin": {
       "groupId": "com.vaadin",
@@ -304,12 +285,6 @@
       "artifactId": "spring-boot-starter-groovy-templates",
       "scope": "compile"
     },
-    "jte": {
-      "groupId": "gg.jte",
-      "artifactId": "jte-spring-boot-starter-4",
-      "scope": "compile",
-      "version": "3.2.3"
-    },
     "data-couchbase-reactive": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-data-couchbase-reactive",
@@ -324,6 +299,12 @@
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-graphql",
       "scope": "compile"
+    },
+    "spring-ai-vectordb-opensearch": {
+      "groupId": "org.springframework.ai",
+      "artifactId": "spring-ai-starter-vector-store-opensearch",
+      "scope": "compile",
+      "bom": "spring-ai"
     },
     "spring-ai-vectordb-s3": {
       "groupId": "org.springframework.ai",
@@ -341,12 +322,6 @@
       "artifactId": "spring-ai-starter-vector-store-qdrant",
       "scope": "compile",
       "bom": "spring-ai"
-    },
-    "netflix-dgs": {
-      "groupId": "com.netflix.graphql.dgs",
-      "artifactId": "graphql-dgs-spring-graphql-starter",
-      "scope": "compile",
-      "bom": "netflix-dgs"
     },
     "oauth2-client": {
       "groupId": "org.springframework.boot",
@@ -375,16 +350,16 @@
       "scope": "compile",
       "bom": "spring-cloud"
     },
+    "spring-ai-vectordb-aws-opensearch": {
+      "groupId": "org.springframework.ai",
+      "artifactId": "spring-ai-starter-vector-store-aws-opensearch",
+      "scope": "compile",
+      "bom": "spring-ai"
+    },
     "amqp": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-amqp",
       "scope": "compile"
-    },
-    "spring-ai-vertexai-gemini": {
-      "groupId": "org.springframework.ai",
-      "artifactId": "spring-ai-starter-model-vertex-ai-gemini",
-      "scope": "compile",
-      "bom": "spring-ai"
     },
     "rsocket": {
       "groupId": "org.springframework.boot",
@@ -467,17 +442,17 @@
       "scope": "compile",
       "bom": "spring-ai"
     },
+    "okta": {
+      "groupId": "com.okta.spring",
+      "artifactId": "okta-spring-boot-starter",
+      "scope": "compile",
+      "version": "3.1.0"
+    },
     "spring-ai-vectordb-chroma": {
       "groupId": "org.springframework.ai",
       "artifactId": "spring-ai-starter-vector-store-chroma",
       "scope": "compile",
       "bom": "spring-ai"
-    },
-    "solace": {
-      "groupId": "com.solace.spring.boot",
-      "artifactId": "solace-jms-spring-boot-starter",
-      "scope": "compile",
-      "bom": "solace-spring-boot"
     },
     "session-jdbc": {
       "groupId": "org.springframework.boot",
@@ -509,12 +484,6 @@
       "artifactId": "micrometer-tracing-bridge-brave",
       "scope": "compile"
     },
-    "htmx": {
-      "groupId": "io.github.wimdeblauwe",
-      "artifactId": "htmx-spring-boot",
-      "scope": "compile",
-      "version": "5.0.0"
-    },
     "cloud-stream": {
       "groupId": "org.springframework.cloud",
       "artifactId": "spring-cloud-stream",
@@ -532,12 +501,6 @@
       "scope": "compile",
       "bom": "spring-ai"
     },
-    "spring-ai-vectordb-azurecosmosdb": {
-      "groupId": "org.springframework.ai",
-      "artifactId": "spring-ai-starter-vector-store-azure-cosmos-db",
-      "scope": "compile",
-      "bom": "spring-ai"
-    },
     "docker-compose": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-docker-compose",
@@ -548,28 +511,22 @@
       "artifactId": "spring-boot-starter-liquibase",
       "scope": "compile"
     },
-    "azure-cosmos-db": {
-      "groupId": "com.azure.spring",
-      "artifactId": "spring-cloud-azure-starter-data-cosmos",
-      "scope": "compile",
-      "bom": "spring-cloud-azure"
-    },
     "cloud-gateway-reactive": {
       "groupId": "org.springframework.cloud",
       "artifactId": "spring-cloud-starter-gateway-server-webflux",
       "scope": "compile",
       "bom": "spring-cloud"
     },
+    "spring-ai-google-genai": {
+      "groupId": "org.springframework.ai",
+      "artifactId": "spring-ai-starter-model-google-genai",
+      "scope": "compile",
+      "bom": "spring-ai"
+    },
     "ldap": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-ldap",
       "scope": "compile"
-    },
-    "spring-ai-chat-memory-repository-cosmos-db": {
-      "groupId": "org.springframework.ai",
-      "artifactId": "spring-ai-starter-model-chat-memory-repository-cosmos-db",
-      "scope": "compile",
-      "bom": "spring-ai"
     },
     "websocket": {
       "groupId": "org.springframework.boot",
@@ -598,12 +555,6 @@
       "scope": "compile",
       "bom": "spring-ai"
     },
-    "spring-ai-openai-sdk": {
-      "groupId": "org.springframework.ai",
-      "artifactId": "spring-ai-starter-model-openai-sdk",
-      "scope": "compile",
-      "bom": "spring-ai"
-    },
     "data-couchbase": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-data-couchbase",
@@ -621,14 +572,20 @@
       "scope": "compile",
       "version": "8.3.0"
     },
+    "spring-ai-google-genai-embedding": {
+      "groupId": "org.springframework.ai",
+      "artifactId": "spring-ai-starter-model-google-genai-embedding",
+      "scope": "compile",
+      "bom": "spring-ai"
+    },
     "web-services": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-webservices",
       "scope": "compile"
     },
-    "spring-ai-azure-openai": {
+    "spring-ai-tool-search-advisor": {
       "groupId": "org.springframework.ai",
-      "artifactId": "spring-ai-starter-model-azure-openai",
+      "artifactId": "spring-ai-starter-tool-search-advisor",
       "scope": "compile",
       "bom": "spring-ai"
     },
@@ -640,7 +597,7 @@
     },
     "oracle": {
       "groupId": "com.oracle.database.jdbc",
-      "artifactId": "ojdbc11",
+      "artifactId": "ojdbc17",
       "scope": "runtime"
     },
     "sqlite": {
@@ -724,6 +681,12 @@
       "artifactId": "spring-boot-starter-data-redis",
       "scope": "compile"
     },
+    "spring-ai-elevenlabs": {
+      "groupId": "org.springframework.ai",
+      "artifactId": "spring-ai-starter-model-elevenlabs",
+      "scope": "compile",
+      "bom": "spring-ai"
+    },
     "pulsar": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-pulsar",
@@ -739,13 +702,7 @@
       "groupId": "org.springaicommunity",
       "artifactId": "mcp-server-security",
       "scope": "compile",
-      "version": "0.1.5"
-    },
-    "mybatis": {
-      "groupId": "org.mybatis.spring.boot",
-      "artifactId": "mybatis-spring-boot-starter",
-      "scope": "compile",
-      "version": "4.0.1"
+      "version": "0.1.14"
     },
     "webflux": {
       "groupId": "org.springframework.boot",
@@ -763,10 +720,9 @@
       "scope": "compile"
     },
     "spring-grpc-client": {
-      "groupId": "org.springframework.grpc",
-      "artifactId": "spring-grpc-client-spring-boot-starter",
-      "scope": "compile",
-      "bom": "spring-grpc"
+      "groupId": "org.springframework.boot",
+      "artifactId": "spring-boot-starter-grpc-client",
+      "scope": "compile"
     },
     "jdbc": {
       "groupId": "org.springframework.boot",
@@ -777,12 +733,6 @@
       "groupId": "com.h2database",
       "artifactId": "h2",
       "scope": "runtime"
-    },
-    "cloud-contract-verifier": {
-      "groupId": "org.springframework.cloud",
-      "artifactId": "spring-cloud-starter-contract-verifier",
-      "scope": "test",
-      "bom": "spring-cloud"
     },
     "mustache": {
       "groupId": "org.springframework.boot",
@@ -799,12 +749,6 @@
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-data-mongodb-reactive",
       "scope": "compile"
-    },
-    "cloud-gcp-pubsub": {
-      "groupId": "com.google.cloud",
-      "artifactId": "spring-cloud-gcp-starter-pubsub",
-      "scope": "compile",
-      "bom": "spring-cloud-gcp"
     },
     "spring-ai-vectordb-cassandra": {
       "groupId": "org.springframework.ai",
@@ -827,6 +771,11 @@
     "security": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-security",
+      "scope": "compile"
+    },
+    "batch-data-mongodb": {
+      "groupId": "org.springframework.boot",
+      "artifactId": "spring-boot-starter-batch-data-mongodb",
       "scope": "compile"
     },
     "sqlserver": {
@@ -899,11 +848,11 @@
       "artifactId": "spring-boot-starter-mongodb",
       "scope": "compile"
     },
-    "sentry": {
-      "groupId": "io.sentry",
-      "artifactId": "sentry-spring-boot-4-starter",
+    "jobrunr": {
+      "groupId": "org.jobrunr",
+      "artifactId": "jobrunr-spring-boot-4-starter",
       "scope": "compile",
-      "bom": "sentry"
+      "version": "8.7.0"
     },
     "spring-ai-bedrock-converse": {
       "groupId": "org.springframework.ai",
@@ -954,16 +903,16 @@
       "artifactId": "spring-boot-starter-quartz",
       "scope": "compile"
     },
-    "cloud-gcp-storage": {
-      "groupId": "com.google.cloud",
-      "artifactId": "spring-cloud-gcp-starter-storage",
-      "scope": "compile",
-      "bom": "spring-cloud-gcp"
-    },
     "batch-jdbc": {
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-batch-jdbc",
       "scope": "compile"
+    },
+    "spring-ai-chat-memory-repository-mongodb": {
+      "groupId": "org.springframework.ai",
+      "artifactId": "spring-ai-starter-model-chat-memory-repository-mongodb",
+      "scope": "compile",
+      "bom": "spring-ai"
     },
     "cloud-function": {
       "groupId": "org.springframework.cloud",
@@ -975,12 +924,6 @@
       "groupId": "org.mariadb.jdbc",
       "artifactId": "mariadb-java-client",
       "scope": "runtime"
-    },
-    "azure-storage": {
-      "groupId": "com.azure.spring",
-      "artifactId": "spring-cloud-azure-starter-storage",
-      "scope": "compile",
-      "bom": "spring-cloud-azure"
     },
     "spring-ai-vectordb-mongodb-atlas": {
       "groupId": "org.springframework.ai",
@@ -1000,6 +943,12 @@
       "scope": "compile",
       "bom": "spring-ai"
     },
+    "spring-ai-deepseek": {
+      "groupId": "org.springframework.ai",
+      "artifactId": "spring-ai-starter-model-deepseek",
+      "scope": "compile",
+      "bom": "spring-ai"
+    },
     "spring-ai-vectordb-pgvector": {
       "groupId": "org.springframework.ai",
       "artifactId": "spring-ai-starter-vector-store-pgvector",
@@ -1010,12 +959,6 @@
       "groupId": "org.springframework.boot",
       "artifactId": "spring-boot-starter-r2dbc",
       "scope": "compile"
-    },
-    "cloud-gcp": {
-      "groupId": "com.google.cloud",
-      "artifactId": "spring-cloud-gcp-starter",
-      "scope": "compile",
-      "bom": "spring-cloud-gcp"
     },
     "cloud-config-client": {
       "groupId": "org.springframework.cloud",
@@ -1038,40 +981,30 @@
     }
   },
   "boms": {
-    "solace-spring-boot": {
-      "groupId": "com.solace.spring.boot",
-      "artifactId": "solace-spring-boot-bom",
-      "version": "3.0.0"
-    },
-    "spring-cloud-azure": {
-      "groupId": "com.azure.spring",
-      "artifactId": "spring-cloud-azure-dependencies",
-      "version": "7.1.0"
-    },
     "codecentric-spring-boot-admin": {
       "groupId": "de.codecentric",
       "artifactId": "spring-boot-admin-dependencies",
-      "version": "4.0.2"
+      "version": "4.1.2"
     },
     "spring-cloud": {
       "groupId": "org.springframework.cloud",
       "artifactId": "spring-cloud-dependencies",
-      "version": "2025.1.1"
+      "version": "2025.1.3"
     },
-    "netflix-dgs": {
-      "groupId": "com.netflix.graphql.dgs",
-      "artifactId": "graphql-dgs-platform-dependencies",
-      "version": "11.0.0"
-    },
-    "spring-shell": {
-      "groupId": "org.springframework.shell",
-      "artifactId": "spring-shell-dependencies",
-      "version": "4.0.1"
+    "vaadin": {
+      "groupId": "com.vaadin",
+      "artifactId": "vaadin-bom",
+      "version": "25.2.6"
     },
     "spring-modulith": {
       "groupId": "org.springframework.modulith",
       "artifactId": "spring-modulith-bom",
-      "version": "2.0.5"
+      "version": "2.1.1"
+    },
+    "spring-ai": {
+      "groupId": "org.springframework.ai",
+      "artifactId": "spring-ai-bom",
+      "version": "2.0.1"
     },
     "datasource-micrometer": {
       "groupId": "net.ttddyy.observation",
@@ -1081,32 +1014,7 @@
     "spring-cloud-services": {
       "groupId": "io.pivotal.spring.cloud",
       "artifactId": "spring-cloud-services-dependencies",
-      "version": "4.4.0"
-    },
-    "spring-cloud-gcp": {
-      "groupId": "com.google.cloud",
-      "artifactId": "spring-cloud-gcp-dependencies",
-      "version": "8.0.1"
-    },
-    "vaadin": {
-      "groupId": "com.vaadin",
-      "artifactId": "vaadin-bom",
-      "version": "25.1.0"
-    },
-    "spring-grpc": {
-      "groupId": "org.springframework.grpc",
-      "artifactId": "spring-grpc-dependencies",
-      "version": "1.0.2"
-    },
-    "spring-ai": {
-      "groupId": "org.springframework.ai",
-      "artifactId": "spring-ai-bom",
-      "version": "2.0.0-M4"
-    },
-    "sentry": {
-      "groupId": "io.sentry",
-      "artifactId": "sentry-bom",
-      "version": "8.27.0"
+      "version": "4.4.1"
     }
   }
 }
