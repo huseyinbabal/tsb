@@ -83,7 +83,7 @@
             "id": "modulith",
             "name": "Spring Modulith",
             "description": "Support for building modular monolithic applications.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.3.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-modulith/reference/"
@@ -203,7 +203,7 @@
             "id": "session-data-mongodb",
             "name": "Spring Session for Spring Data MongoDB",
             "description": "Provides an API and a Spring Data MongoDB implementation for managing user session information.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-session/reference/"
@@ -224,7 +224,7 @@
             "id": "session-hazelcast",
             "name": "Spring Session for Hazelcast",
             "description": "Provides an API and a Hazelcast implementation for managing user session information.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-session/reference/"
@@ -291,7 +291,7 @@
             "id": "vaadin",
             "name": "Vaadin",
             "description": "The full-stack web app platform for Spring. Build views fully in Java with Flow, or in React using Hilla.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://spring.io/guides/gs/crud-with-vaadin/",
@@ -306,7 +306,7 @@
             "id": "netflix-dgs",
             "name": "Netflix DGS",
             "description": "Build GraphQL applications with Netflix DGS and Spring for GraphQL.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://netflix.github.io/dgs/"
@@ -317,7 +317,7 @@
             "id": "htmx",
             "name": "htmx",
             "description": "Build modern user interfaces with the simplicity and power of hypertext.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://github.com/wimdeblauwe/htmx-spring-boot"
@@ -331,7 +331,7 @@
             "id": "springdoc-openapi",
             "name": "SpringDoc OpenAPI",
             "description": "Add OpenAPI / Swagger documentation to web-based Spring applications.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://springdoc.org/"
@@ -398,7 +398,7 @@
             "id": "jte",
             "name": "jte",
             "description": "Secure and lightweight template engine for Java and Kotlin.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://jte.gg/"
@@ -518,7 +518,7 @@
             "id": "okta",
             "name": "Okta",
             "description": "Okta specific configuration for Spring Security/Spring Boot OAuth2 features. Enable your Spring Boot application to work with Okta via OAuth 2.0/OIDC.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "guide": [
                 {
@@ -635,7 +635,7 @@
             "id": "mybatis",
             "name": "MyBatis Framework",
             "description": "Persistence framework with support for custom SQL, stored procedures and advanced mappings. MyBatis couples objects with stored procedures or SQL statements using a XML descriptor or annotations.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://github.com/mybatis/spring-boot-starter/wiki/Quick-Start",
@@ -1055,18 +1055,6 @@
             }
           },
           {
-            "id": "pulsar-reactive",
-            "name": "Spring for Apache Pulsar (Reactive)",
-            "description": "Build reactive messaging applications with Apache Pulsar",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-boot/{bootVersion}/reference/messaging/pulsar.html",
-                "templated": true
-              }
-            }
-          },
-          {
             "id": "websocket",
             "name": "WebSocket",
             "description": "Build Servlet-based WebSocket applications with SockJS and STOMP.",
@@ -1095,7 +1083,7 @@
             "id": "camel",
             "name": "Apache Camel",
             "description": "Apache Camel is an open source integration framework that empowers you to quickly and easily integrate various systems consuming or producing data.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://camel.apache.org/camel-spring-boot/latest/spring-boot.html",
@@ -1107,7 +1095,7 @@
             "id": "solace",
             "name": "Solace PubSub+",
             "description": "Connect to a Solace PubSub+ Advanced Event Broker to publish, subscribe, request/reply and store/replay messages",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": [
                 {
@@ -1146,6 +1134,18 @@
             "name": "Spring Batch JDBC",
             "description": "JDBC support for Spring Batch applications.",
             "versionRange": "4.0.0.RELEASE",
+            "_links": {
+              "reference": {
+                "href": "https://docs.spring.io/spring-boot/{bootVersion}/how-to/batch.html",
+                "templated": true
+              }
+            }
+          },
+          {
+            "id": "batch-data-mongodb",
+            "name": "Spring Batch MongoDB",
+            "description": "MongoDB support for Spring Batch applications.",
+            "versionRange": "4.1.0.M3",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-boot/{bootVersion}/how-to/batch.html",
@@ -1202,6 +1202,20 @@
             }
           },
           {
+            "id": "jobrunr",
+            "name": "JobRunr",
+            "description": "Easily schedule and process background jobs using a distributed job scheduler with a built-in dashboard.",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
+            "_links": {
+              "guide": {
+                "href": "https://www.jobrunr.io/en/documentation/getting-started/spring/"
+              },
+              "reference": {
+                "href": "https://www.jobrunr.io/en/documentation/configuration/spring/"
+              }
+            }
+          },
+          {
             "id": "cache",
             "name": "Spring Cache Abstraction",
             "description": "Provides cache-related operations, such as the ability to update the content of the cache, but does not provide the actual data store.",
@@ -1220,7 +1234,7 @@
             "id": "spring-shell",
             "name": "Spring Shell",
             "description": "Build command line applications with spring.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-shell/reference/index.html"
@@ -1292,7 +1306,7 @@
             "id": "codecentric-spring-boot-admin-client",
             "name": "codecentric's Spring Boot Admin (Client)",
             "description": "Required for your application to register with a Codecentric's Spring Boot Admin Server instance.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://codecentric.github.io/spring-boot-admin/current/#getting-started"
@@ -1303,7 +1317,7 @@
             "id": "codecentric-spring-boot-admin-server",
             "name": "codecentric's Spring Boot Admin (Server)",
             "description": "A community project to manage and monitor your Spring Boot applications. Provides a UI on top of the Spring Boot Actuator endpoints.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://codecentric.github.io/spring-boot-admin/current/#getting-started"
@@ -1314,7 +1328,7 @@
             "id": "sentry",
             "name": "Sentry",
             "description": "Application performance monitoring and error tracking that help software teams see clearer, solve quicker, and learn continuously.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://docs.sentry.io/platforms/java/guides/spring-boot/",
@@ -1423,7 +1437,7 @@
             "id": "datasource-micrometer",
             "name": "Datasource Micrometer",
             "description": "Add Micrometer observability instrumentation for JDBC operations.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)"
+            "versionRange": "[4.0.0.RELEASE,4.3.0.M1)"
           },
           {
             "id": "distributed-tracing",
@@ -1441,12 +1455,6 @@
                 "templated": true
               }
             }
-          },
-          {
-            "id": "wavefront",
-            "name": "Wavefront",
-            "description": "Publish metrics and optionally distributed traces to Tanzu Observability by Wavefront, a SaaS-based metrics monitoring and analytics platform that lets you visualize, query, and alert over data from across your entire stack.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)"
           },
           {
             "id": "zipkin",
@@ -1479,28 +1487,6 @@
             }
           },
           {
-            "id": "cloud-contract-verifier",
-            "name": "Contract Verifier",
-            "description": "Moves TDD to the level of software architecture by enabling Consumer Driven Contract (CDC) development.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-cloud-contract/reference/"
-              }
-            }
-          },
-          {
-            "id": "cloud-contract-stub-runner",
-            "name": "Contract Stub Runner",
-            "description": "Stub Runner for HTTP/Messaging based communication. Allows creating WireMock stubs from RestDocs tests.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-cloud-contract/reference/project-features-stubrunner.html"
-              }
-            }
-          },
-          {
             "id": "unboundid-ldap",
             "name": "Embedded LDAP Server",
             "description": "Provides a platform neutral way for running a LDAP server in unit tests.",
@@ -1520,7 +1506,7 @@
             "id": "cloud-starter",
             "name": "Cloud Bootstrap",
             "description": "Non-specific Spring Cloud features, unrelated to external libraries or integrations (e.g. Bootstrap context and @RefreshScope).",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-commons/reference/spring-cloud-commons/application-context-services.html"
@@ -1531,7 +1517,7 @@
             "id": "cloud-function",
             "name": "Function",
             "description": "Promotes the implementation of business logic via functions and supports a uniform programming model across serverless providers, as well as the ability to run standalone (locally or in a PaaS).",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-function/reference/"
@@ -1546,7 +1532,7 @@
             "id": "cloud-task",
             "name": "Task",
             "description": "Allows a user to develop and run short lived microservices using Spring Cloud. Run them locally, in the cloud, and on Spring Cloud Data Flow.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-task/reference/"
@@ -1562,7 +1548,7 @@
             "id": "cloud-config-client",
             "name": "Config Client",
             "description": "Client that connects to a Spring Cloud Config Server to fetch the application's configuration.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-config/reference/client.html"
@@ -1573,7 +1559,7 @@
             "id": "cloud-config-server",
             "name": "Config Server",
             "description": "Central management for configuration via Git, SVN, or HashiCorp Vault.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://spring.io/guides/gs/centralized-configuration/",
@@ -1588,7 +1574,7 @@
             "id": "cloud-starter-vault-config",
             "name": "Vault Configuration",
             "description": "Provides client-side support for externalized configuration in a distributed system. Using HashiCorp's Vault you have a central place to manage external secret properties for applications across all environments.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-vault/reference/"
@@ -1599,7 +1585,7 @@
             "id": "cloud-starter-zookeeper-config",
             "name": "Apache Zookeeper Configuration",
             "description": "Enable and configure common patterns inside your application and build large distributed systems with Apache Zookeeper based components. The provided patterns include Service Discovery and Configuration.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-zookeeper/reference/config.html"
@@ -1610,7 +1596,7 @@
             "id": "cloud-starter-consul-config",
             "name": "Consul Configuration",
             "description": "Enable and configure the common patterns inside your application and build large distributed systems with Hashicorp’s Consul. The patterns provided include Service Discovery, Distributed Configuration and Control Bus.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-consul/reference/"
@@ -1626,7 +1612,7 @@
             "id": "cloud-eureka",
             "name": "Eureka Discovery Client",
             "description": "A REST based service for locating services for the purpose of load balancing and failover of middle-tier servers.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://spring.io/guides/gs/service-registration-and-discovery/",
@@ -1641,7 +1627,7 @@
             "id": "cloud-eureka-server",
             "name": "Eureka Server",
             "description": "spring-cloud-netflix Eureka Server.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://spring.io/guides/gs/service-registration-and-discovery/",
@@ -1656,7 +1642,7 @@
             "id": "cloud-starter-zookeeper-discovery",
             "name": "Apache Zookeeper Discovery",
             "description": "Service discovery with Apache Zookeeper.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-zookeeper/reference/discovery.html"
@@ -1667,7 +1653,7 @@
             "id": "cloud-starter-consul-discovery",
             "name": "Consul Discovery",
             "description": "Service discovery with Hashicorp Consul.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-consul/reference/discovery.html"
@@ -1683,7 +1669,7 @@
             "id": "cloud-gateway",
             "name": "Gateway",
             "description": "Provides a simple, yet effective way to route to APIs in Servlet-based applications. Provides cross-cutting concerns to those APIs such as security, monitoring/metrics, and resiliency.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webmvc.html"
@@ -1694,7 +1680,7 @@
             "id": "cloud-gateway-reactive",
             "name": "Reactive Gateway",
             "description": "Provides a simple, yet effective way to route to APIs in reactive applications. Provides cross-cutting concerns to those APIs such as security, monitoring/metrics, and resiliency.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux.html"
@@ -1709,7 +1695,7 @@
             "id": "cloud-feign",
             "name": "OpenFeign",
             "description": "Declarative REST Client. OpenFeign creates a dynamic implementation of an interface decorated with JAX-RS or Spring MVC annotations.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "sample": {
                 "href": "https://github.com/spring-cloud-samples/feign-eureka",
@@ -1724,7 +1710,7 @@
             "id": "cloud-loadbalancer",
             "name": "Cloud LoadBalancer",
             "description": "Client-side load-balancing with Spring Cloud LoadBalancer.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://spring.io/guides/gs/spring-cloud-loadbalancer/",
@@ -1744,7 +1730,7 @@
             "id": "cloud-resilience4j",
             "name": "Resilience4J",
             "description": "Spring Cloud Circuit breaker with Resilience4j as the underlying implementation.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-circuitbreaker/reference/spring-cloud-circuitbreaker-resilience4j.html"
@@ -1760,7 +1746,7 @@
             "id": "cloud-bus",
             "name": "Cloud Bus",
             "description": "Links nodes of a distributed system with a lightweight message broker which can used to broadcast state changes or other management instructions (requires a binder, e.g. Apache Kafka or RabbitMQ).",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-bus/reference/"
@@ -1771,7 +1757,7 @@
             "id": "cloud-stream",
             "name": "Cloud Stream",
             "description": "Framework for building highly scalable event-driven microservices connected with shared messaging systems (requires a binder, e.g. Apache Kafka, Apache Pulsar, RabbitMQ, or Solace PubSub+).",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-cloud-stream/reference/"
@@ -1787,7 +1773,7 @@
             "id": "scs-config-client",
             "name": "Config Client (TAS)",
             "description": "Config client on VMware Tanzu Application Service.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.vmware.com/en/Spring-Cloud-Services-for-VMware-Tanzu/index.html"
@@ -1798,7 +1784,7 @@
             "id": "scs-service-registry",
             "name": "Service Registry (TAS)",
             "description": "Eureka service discovery client on VMware Tanzu Application Service.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.vmware.com/en/Spring-Cloud-Services-for-VMware-Tanzu/index.html"
@@ -1890,13 +1876,29 @@
         ]
       },
       {
+        "name": "VMware Tanzu Spring SDK",
+        "values": [
+          {
+            "id": "tanzu-spring-sdk",
+            "name": "Tanzu Spring SDK [Enterprise]",
+            "description": "The Tanzu Spring SDK is a Spring Boot BOM with optional libraries for exposing observability and using OpenFeature based feature flags in Tanzu Platform.",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
+            "_links": {
+              "reference": {
+                "href": "https://techdocs.broadcom.com/us/en/vmware-tanzu/spring/tanzu-spring/commercial/spring-tanzu/tanzu-spring-sdk-getting-started.html"
+              }
+            }
+          }
+        ]
+      },
+      {
         "name": "Microsoft Azure",
         "values": [
           {
             "id": "azure-support",
             "name": "Azure Support",
             "description": "Auto-configuration for Azure Services (Service Bus, Storage, Active Directory, Key Vault, and more).",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://spring.io/guides/gs/spring-boot-for-azure/",
@@ -1916,7 +1918,7 @@
             "id": "azure-active-directory",
             "name": "Azure Active Directory",
             "description": "Spring Security integration with Azure Active Directory for authentication.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://aka.ms/spring/msdocs/aad",
@@ -1935,7 +1937,7 @@
             "id": "azure-cosmos-db",
             "name": "Azure Cosmos DB",
             "description": "Fully managed NoSQL database service for modern app development, including Spring Data support.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://aka.ms/spring/msdocs/cosmos",
@@ -1954,7 +1956,7 @@
             "id": "azure-keyvault",
             "name": "Azure Key Vault",
             "description": "All key vault features are supported, e.g. manage application secrets and certificates.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "guide": [
                 {
@@ -1979,7 +1981,7 @@
             "id": "azure-storage",
             "name": "Azure Storage",
             "description": "All Storage features are supported, e.g. blob, fileshare and queue.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "guide": {
                 "href": "https://aka.ms/spring/msdocs/storage",
@@ -2003,7 +2005,7 @@
             "id": "cloud-gcp",
             "name": "Google Cloud Support",
             "description": "Contains auto-configuration support for every Google Cloud integration. Most of the auto-configuration code is only enabled if other dependencies are added to the classpath.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://googlecloudplatform.github.io/spring-cloud-gcp/reference/html/index.html"
@@ -2018,7 +2020,7 @@
             "id": "cloud-gcp-pubsub",
             "name": "Google Cloud Messaging",
             "description": "Adds the Google Cloud Support entry and all the required dependencies so that the Google Cloud Pub/Sub integration work out of the box.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://googlecloudplatform.github.io/spring-cloud-gcp/reference/html/index.html#cloud-pubsub"
@@ -2033,7 +2035,7 @@
             "id": "cloud-gcp-storage",
             "name": "Google Cloud Storage",
             "description": "Adds the Google Cloud Support entry and all the required dependencies so that the Google Cloud Storage integration work out of the box.",
-            "versionRange": "[3.5.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://googlecloudplatform.github.io/spring-cloud-gcp/reference/html/index.html#cloud-storage"
@@ -2052,7 +2054,7 @@
             "id": "spring-ai-anthropic",
             "name": "Anthropic Claude",
             "description": "Spring AI support for Anthropic Claude AI models.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat/anthropic-chat.html"
@@ -2060,21 +2062,10 @@
             }
           },
           {
-            "id": "spring-ai-azure-openai",
-            "name": "Azure OpenAI",
-            "description": "Spring AI support for Azure’s OpenAI offering, powered by ChatGPT. It extends beyond traditional OpenAI capabilities, delivering AI-driven text generation with enhanced functionality.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-ai/reference/api/chat/azure-openai-chat.html"
-              }
-            }
-          },
-          {
             "id": "spring-ai-vectordb-azure",
             "name": "Azure AI Search",
             "description": "Spring AI vector database support for Azure AI Search. It is an AI-powered information retrieval platform and part of Microsoft’s larger AI platform. Among other features, it allows users to query information using vector-based storage and retrieval.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/azure.html"
@@ -2085,7 +2076,7 @@
             "id": "spring-ai-bedrock",
             "name": "Amazon Bedrock",
             "description": "Spring AI support for Amazon Bedrock Cohere and Titan Embedding Models.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/bedrock-chat.html"
@@ -2096,7 +2087,7 @@
             "id": "spring-ai-bedrock-converse",
             "name": "Amazon Bedrock Converse",
             "description": "Spring AI support for Amazon Bedrock Converse. It provides a unified interface for conversational AI models with enhanced capabilities including function/tool calling, multimodal inputs, and streaming responses.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/bedrock-converse.html"
@@ -2107,7 +2098,7 @@
             "id": "spring-ai-vectordb-bedrock-knowledgebase",
             "name": "Amazon Bedrock Knowledge Base",
             "description": "Spring AI vector database support for Amazon Bedrock Knowledge Base. It provides fully managed Retrieval-Augmented Generation (RAG) capabilities with enterprise-grade security and privacy.",
-            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/bedrock-knowledgebase.html"
@@ -2118,7 +2109,7 @@
             "id": "spring-ai-deepseek",
             "name": "DeepSeek",
             "description": "Spring AI support for DeepSeek AI models.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat/deepseek-chat.html"
@@ -2129,7 +2120,7 @@
             "id": "spring-ai-elevenlabs",
             "name": "ElevenLabs",
             "description": "Spring AI support for ElevenLabs text-to-speech models.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/speech/elevenlabs-speech.html"
@@ -2140,7 +2131,7 @@
             "id": "spring-ai-google-genai",
             "name": "Google GenAI",
             "description": "Spring AI support for Google GenAI (Gemini) models.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat/google-genai-chat.html"
@@ -2151,7 +2142,7 @@
             "id": "spring-ai-google-genai-embedding",
             "name": "Google GenAI Embeddings",
             "description": "Spring AI support for Google GenAI embedding models.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/embeddings/google-genai-embeddings.html"
@@ -2159,54 +2150,10 @@
             }
           },
           {
-            "id": "spring-ai-huggingface",
-            "name": "HuggingFace",
-            "description": "Spring AI support for HuggingFace AI models.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-ai/reference/api/chat/huggingface.html"
-              }
-            }
-          },
-          {
-            "id": "spring-ai-minimax",
-            "name": "MiniMax",
-            "description": "Spring AI support for MiniMax AI models.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-ai/reference/api/chat/minimax-chat.html"
-              }
-            }
-          },
-          {
-            "id": "spring-ai-oci-genai",
-            "name": "OCI GenAI",
-            "description": "Spring AI support for Oracle Cloud Infrastructure (OCI) GenAI models.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-ai/reference/api/chat/oci-genai-chat.html"
-              }
-            }
-          },
-          {
-            "id": "spring-ai-zhipuai",
-            "name": "ZhipuAI",
-            "description": "Spring AI support for ZhipuAI models.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-ai/reference/api/chat/zhipuai-chat.html"
-              }
-            }
-          },
-          {
             "id": "spring-ai-vectordb-cassandra",
             "name": "Apache Cassandra Vector Database",
             "description": "Spring AI vector database support for Apache Cassandra.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/apache-cassandra.html"
@@ -2217,7 +2164,7 @@
             "id": "spring-ai-vectordb-chroma",
             "name": "Chroma Vector Database",
             "description": "Spring AI vector database support for Chroma. It is an open-source embedding database and gives you the tools to store document embeddings, content, and metadata. It also allows to search through those embeddings, including metadata filtering.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/chroma.html"
@@ -2228,7 +2175,7 @@
             "id": "spring-ai-vectordb-couchbase",
             "name": "Couchbase Vector Database",
             "description": "Spring AI vector database support for Couchbase.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/couchbase.html"
@@ -2239,7 +2186,7 @@
             "id": "spring-ai-vectordb-elasticsearch",
             "name": "Elasticsearch Vector Database",
             "description": "Spring AI vector database support for Elasticsearch.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/elasticsearch.html"
@@ -2250,7 +2197,7 @@
             "id": "spring-ai-vectordb-gemfire",
             "name": "GemFire Vector Database",
             "description": "Spring AI vector database support for GemFire.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/gemfire.html"
@@ -2261,7 +2208,7 @@
             "id": "spring-ai-mcp-server",
             "name": "Model Context Protocol Server",
             "description": "Spring AI support for Model Context Protocol (MCP) servers.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html"
@@ -2272,7 +2219,7 @@
             "id": "spring-ai-mcp-client",
             "name": "Model Context Protocol Client",
             "description": "Spring AI support for Model Context Protocol (MCP) clients.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/mcp/mcp-client-boot-starter-docs.html"
@@ -2280,10 +2227,21 @@
             }
           },
           {
+            "id": "spring-ai-tool-search-advisor",
+            "name": "Tool Search Advisor",
+            "description": "Spring AI Starter for the Tool Search Advisor, enabling dynamic tool discovery via a search index.",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
+            "_links": {
+              "reference": {
+                "href": "https://docs.spring.io/spring-ai/reference/api/tools/tool-search-tool.html"
+              }
+            }
+          },
+          {
             "id": "mcp-security",
             "name": "Model Context Protocol Security [Experimental]",
             "description": "Provides security for Spring AI's MCP server and client, and for the OAuth2 Authorization Server.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://github.com/spring-ai-community/mcp-security?tab=readme-ov-file#mcp-security"
@@ -2294,7 +2252,7 @@
             "id": "spring-ai-vectordb-milvus",
             "name": "Milvus Vector Database",
             "description": "Spring AI vector database support for Milvus. It is an open-source vector database that has garnered significant attention in the fields of data science and machine learning. One of its standout features lies in its robust support for vector indexing and querying.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/milvus.html"
@@ -2305,7 +2263,7 @@
             "id": "spring-ai-mistral",
             "name": "Mistral AI",
             "description": "Spring AI support for Mistral AI, the open and portable generative AI for devs and businesses.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat/mistralai-chat.html"
@@ -2316,7 +2274,7 @@
             "id": "spring-ai-vectordb-mongodb-atlas",
             "name": "MongoDB Atlas Vector Database",
             "description": "Spring AI vector database support for MongoDB Atlas. Is is a fully managed cloud database service that provides an easy way to deploy, operate, and scale a MongoDB database in the cloud.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/mongodb.html"
@@ -2327,7 +2285,7 @@
             "id": "spring-ai-vectordb-neo4j",
             "name": "Neo4j Vector Database",
             "description": "Spring AI vector database support for Neo4j's Vector Search. It allows users to query vector embeddings from large datasets.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/neo4j.html"
@@ -2338,7 +2296,7 @@
             "id": "spring-ai-vectordb-opensearch",
             "name": "OpenSearch Vector Database",
             "description": "Spring AI vector database support for OpenSearch.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/opensearch.html"
@@ -2349,7 +2307,7 @@
             "id": "spring-ai-vectordb-aws-opensearch",
             "name": "AWS OpenSearch Vector Database",
             "description": "Spring AI vector database support for AWS OpenSearch Service.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/opensearch.html"
@@ -2360,7 +2318,7 @@
             "id": "spring-ai-ollama",
             "name": "Ollama",
             "description": "Spring AI support for Ollama. It allows you to run various Large Language Models (LLMs) locally and generate text from them.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html"
@@ -2371,7 +2329,7 @@
             "id": "spring-ai-openai",
             "name": "OpenAI",
             "description": "Spring AI support for ChatGPT, the AI language model and DALL-E, the Image generation model from OpenAI.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html"
@@ -2379,21 +2337,10 @@
             }
           },
           {
-            "id": "spring-ai-openai-sdk",
-            "name": "OpenAI SDK",
-            "description": "Spring AI support for OpenAI using the official OpenAI SDK. Alternative implementation with enhanced features and compatibility.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-ai/reference/api/chat/openai-sdk-chat.html"
-              }
-            }
-          },
-          {
             "id": "spring-ai-chat-memory-repository-in-memory",
             "name": "In-memory Chat Memory Repository",
             "description": "Spring AI support for in-memory chat memory repository.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat-memory.html"
@@ -2404,7 +2351,7 @@
             "id": "spring-ai-chat-memory-repository-jdbc",
             "name": "JDBC Chat Memory Repository",
             "description": "Spring AI support for JDBC based chat memory.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat-memory.html"
@@ -2415,7 +2362,7 @@
             "id": "spring-ai-chat-memory-repository-cassandra",
             "name": "Cassandra Chat Memory Repository",
             "description": "Spring AI support for Cassandra based chat memory.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat-memory.html"
@@ -2426,7 +2373,7 @@
             "id": "spring-ai-chat-memory-repository-mongodb",
             "name": "MongoDB Chat Memory Repository",
             "description": "Spring AI support for MongoDB based chat memory.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat-memory.html"
@@ -2437,18 +2384,7 @@
             "id": "spring-ai-chat-memory-repository-neo4j",
             "name": "Neo4j Chat Memory Repository",
             "description": "Spring AI support for Neo4j based chat memory.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-ai/reference/api/chat-memory.html"
-              }
-            }
-          },
-          {
-            "id": "spring-ai-chat-memory-repository-cosmos-db",
-            "name": "Azure Cosmos DB Chat Memory Repository",
-            "description": "Spring AI support for Azure Cosmos DB based chat memory.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat-memory.html"
@@ -2459,7 +2395,7 @@
             "id": "spring-ai-chat-memory-repository-redis",
             "name": "Redis Chat Memory Repository",
             "description": "Spring AI support for Redis based chat memory.",
-            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/chat-memory.html"
@@ -2470,7 +2406,7 @@
             "id": "spring-ai-vectordb-oracle",
             "name": "Oracle Vector Database",
             "description": "Spring AI vector database support for Oracle. Enables storing, indexing and searching vector embeddings in Oracle Database 23ai.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/oracle.html"
@@ -2481,7 +2417,7 @@
             "id": "spring-ai-vectordb-pgvector",
             "name": "PGvector Vector Database",
             "description": "Spring AI vector database support for PGvector. It is an open-source extension for PostgreSQL that enables storing and searching over machine learning-generated embeddings.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/pgvector.html"
@@ -2492,7 +2428,7 @@
             "id": "spring-ai-vectordb-pinecone",
             "name": "Pinecone Vector Database",
             "description": "Spring AI vector database support for Pinecone. It is a popular cloud-based vector database and allows you to store and search vectors efficiently.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/pinecone.html"
@@ -2503,7 +2439,7 @@
             "id": "spring-ai-postgresml",
             "name": "PostgresML",
             "description": "Spring AI support for the PostgresML text embeddings models.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/embeddings/postgresml-embeddings.html"
@@ -2514,7 +2450,7 @@
             "id": "spring-ai-vectordb-redis",
             "name": "Redis Search and Query Vector Database",
             "description": "Spring AI vector database support for Redis Search and Query. It extends the core features of Redis OSS and allows you to use Redis as a vector database.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/redis.html"
@@ -2525,7 +2461,7 @@
             "id": "spring-ai-vectordb-s3",
             "name": "S3 Vector Database",
             "description": "Spring AI vector database support for AWS S3. Store and retrieve vector embeddings using Amazon S3 object storage with efficient search capabilities.",
-            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/s3.html"
@@ -2536,7 +2472,7 @@
             "id": "spring-ai-vectordb-mariadb",
             "name": "MariaDB Vector Database",
             "description": "Spring AI support for MariaDB. MariaDB Vector Store support is part of MariaDB 11.7. It provides efficient vector similarity search capabilities using vector indexes, supporting both cosine similarity and Euclidean distance metrics.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/mariadb.html"
@@ -2544,21 +2480,10 @@
             }
           },
           {
-            "id": "spring-ai-vectordb-azurecosmosdb",
-            "name": "Azure Cosmos DB Vector Store",
-            "description": "Spring AI support for Azure Cosmos DB. Azure Cosmos DB is Microsoft’s globally distributed cloud-native database service designed for mission-critical applications.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/azure-cosmos-db.html"
-              }
-            }
-          },
-          {
             "id": "spring-ai-stabilityai",
             "name": "Stability AI",
             "description": "Spring AI support for Stability AI's text to image generation model.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/image/stabilityai-image.html"
@@ -2569,7 +2494,7 @@
             "id": "spring-ai-transformers",
             "name": "Transformers (ONNX) Embeddings",
             "description": "Spring AI support for pre-trained transformer models, serialized into the Open Neural Network Exchange (ONNX) format.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/embeddings/onnx.html"
@@ -2577,21 +2502,10 @@
             }
           },
           {
-            "id": "spring-ai-vertexai-gemini",
-            "name": "Vertex AI Gemini",
-            "description": "Spring AI support for Google Vertex Gemini chat. Doesn't support embeddings.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
-            "_links": {
-              "reference": {
-                "href": "https://docs.spring.io/spring-ai/reference/api/chat/vertexai-gemini-chat.html"
-              }
-            }
-          },
-          {
             "id": "spring-ai-vertexai-embeddings",
             "name": "Vertex AI Embeddings",
             "description": "Spring AI support for Google Vertex text and multimodal embedding models.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": [
                 {
@@ -2609,7 +2523,7 @@
             "id": "spring-ai-vectordb-qdrant",
             "name": "Qdrant Vector Database",
             "description": "Spring AI vector database support for Qdrant. It is an open-source, high-performance vector search engine/database.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/qdrant.html"
@@ -2620,7 +2534,7 @@
             "id": "spring-ai-vectordb-typesense",
             "name": "Typesense Vector Database",
             "description": "Spring AI vector database support for Typesense.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/typesense.html"
@@ -2631,7 +2545,7 @@
             "id": "spring-ai-vectordb-weaviate",
             "name": "Weaviate Vector Database",
             "description": "Spring AI vector database support for Weaviate, an open-source vector database. It allows you to store data objects and vector embeddings from your favorite ML-models and scale seamlessly into billions of data objects.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/vectordbs/weaviate.html"
@@ -2642,7 +2556,7 @@
             "id": "spring-ai-markdown-document-reader",
             "name": "Markdown Document Reader",
             "description": "Spring AI Markdown document reader. It allows to load Markdown documents, converting them into a list of Spring AI Document objects.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/etl-pipeline.html#_markdown"
@@ -2653,7 +2567,7 @@
             "id": "spring-ai-tika-document-reader",
             "name": "Tika Document Reader",
             "description": "Spring AI Tika document reader. It uses Apache Tika to extract text from a variety of document formats, such as PDF, DOC/DOCX, PPT/PPTX, and HTML. The documents are converted into a list of Spring AI Document objects.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/etl-pipeline.html#_tika_docx_pptx_html"
@@ -2664,7 +2578,7 @@
             "id": "spring-ai-pdf-document-reader",
             "name": "PDF Document Reader",
             "description": "Spring AI PDF document reader. It uses Apache PdfBox to extract text from PDF documents and converting them into a list of Spring AI Document objects.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/etl-pipeline.html#_pdf_page"
@@ -2675,7 +2589,7 @@
             "id": "spring-ai-jsoup-document-reader",
             "name": "JSoup Document Reader",
             "description": "Spring AI HTML document reader using JSoup. It parses HTML documents and converts them into a list of Spring AI Document objects.",
-            "versionRange": "[3.5.0.RELEASE,4.2.0.M1)",
+            "versionRange": "[4.0.0.RELEASE,4.2.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://docs.spring.io/spring-ai/reference/api/etl-pipeline.html"
@@ -2686,7 +2600,7 @@
             "id": "timefold-solver",
             "name": "Timefold Solver",
             "description": "AI solver to optimize operations and scheduling.",
-            "versionRange": "[3.5.0.RELEASE,4.0.0.RELEASE)",
+            "versionRange": "[4.0.0.RELEASE,4.1.0.M1)",
             "_links": {
               "reference": {
                 "href": "https://timefold.ai/docs/timefold-solver/latest/quickstart/spring-boot/spring-boot-quickstart#springBootJavaQuickStart"
@@ -2815,31 +2729,31 @@
   },
   "bootVersion": {
     "type": "single-select",
-    "default": "4.0.5.RELEASE",
+    "default": "4.1.1.RELEASE",
     "values": [
       {
-        "id": "4.1.0.BUILD-SNAPSHOT",
-        "name": "4.1.0 (SNAPSHOT)"
+        "id": "4.2.0.BUILD-SNAPSHOT",
+        "name": "4.2.0 (SNAPSHOT)"
       },
       {
-        "id": "4.1.0.M4",
-        "name": "4.1.0 (M4)"
+        "id": "4.2.0.M1",
+        "name": "4.2.0 (M1)"
       },
       {
-        "id": "4.0.6.BUILD-SNAPSHOT",
-        "name": "4.0.6 (SNAPSHOT)"
+        "id": "4.1.2.BUILD-SNAPSHOT",
+        "name": "4.1.2 (SNAPSHOT)"
       },
       {
-        "id": "4.0.5.RELEASE",
-        "name": "4.0.5"
+        "id": "4.1.1.RELEASE",
+        "name": "4.1.1"
       },
       {
-        "id": "3.5.14.BUILD-SNAPSHOT",
-        "name": "3.5.14 (SNAPSHOT)"
+        "id": "4.0.9.BUILD-SNAPSHOT",
+        "name": "4.0.9 (SNAPSHOT)"
       },
       {
-        "id": "3.5.13.RELEASE",
-        "name": "3.5.13"
+        "id": "4.0.8.RELEASE",
+        "name": "4.0.8"
       }
     ]
   },
