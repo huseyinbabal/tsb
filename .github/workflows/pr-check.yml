@@ -13,7 +13,8 @@ jobs:
   check:
     uses: huseyinbabal/rust-actions/.github/workflows/pr-check.yml@main
     with:
-      check_issue_link: true
+      # The nightly sync PR is bot-generated and has no issue to link
+      check_issue_link: ${{ github.head_ref != 'chore/sync-initializr-metadata' }}
       run_tests: true
       run_fmt: true
       run_clippy: true
