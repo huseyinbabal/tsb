@@ -512,17 +512,15 @@ async fn run_tui() -> Result<()> {
                                         }
                                     }
                                 }
-                                KeyCode::Char('V') => {
-                                    if app.active_resource == "dashboard" {
-                                        match app.fetch_app_pid().await {
-                                            Ok(pid) => {
-                                                if let Err(e) = launch_visualvm_pid(&pid) {
-                                                    app.show_error(e);
-                                                }
+                                KeyCode::Char('V') if app.active_resource == "dashboard" => {
+                                    match app.fetch_app_pid().await {
+                                        Ok(pid) => {
+                                            if let Err(e) = launch_visualvm_pid(&pid) {
+                                                app.show_error(e);
                                             }
-                                            Err(e) => {
-                                                app.show_error(format!("{}", e));
-                                            }
+                                        }
+                                        Err(e) => {
+                                            app.show_error(format!("{}", e));
                                         }
                                     }
                                 }
@@ -1936,13 +1934,11 @@ async fn handle_new_project_key(app: &mut App, key: KeyCode, tx: mpsc::Sender<Ap
         }
         WizardStep::Generating => {
             match key {
-                KeyCode::Esc | KeyCode::Enter => {
-                    if app.new_project_state.gen_done {
-                        // Done — go back to normal mode
-                        app.mode = Mode::Normal;
-                        app.new_project_state = app::NewProjectWizardState::default();
-                    }
-                    // Can't cancel while generating
+                // Can't cancel while generating
+                KeyCode::Esc | KeyCode::Enter if app.new_project_state.gen_done => {
+                    // Done — go back to normal mode
+                    app.mode = Mode::Normal;
+                    app.new_project_state = app::NewProjectWizardState::default();
                 }
                 _ => {}
             }
